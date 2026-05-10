@@ -32,12 +32,12 @@ Script does:
 
 When receiving a Jira URL or key:
 
-Extract key (e.g. WLB-2046)
-Run: BD_ID=$(~/.claude/scripts/jira-to-bd.sh <JIRA-KEY>)
-Script finds existing bead by external-ref or title, else creates YYYY-MM-DD [JIRA-KEY]
-Continue with score-task.sh $BD_ID → claim → size protocol
+1. Extract key (e.g. WLB-2046)
+2. Run: `BD_ID=$(~/.claude/scripts/jira-to-bd.sh <JIRA-KEY>)`
+3. Script finds existing bead by external-ref or title, else creates `YYYY-MM-DD [JIRA-KEY]`
+4. Continue with `score-task.sh $BD_ID` → claim → size protocol
 
-Never bd create manually for Jira issues. Always use jira-to-bd.sh.
+Never `bd create` manually for Jira issues. Always use `jira-to-bd.sh`.
 
 ## Complexity Scoring (automated)
 
@@ -68,15 +68,18 @@ score → claim → ship → close → checkpoint-write.sh <id>
 
 ```
 1. decompose → bd epic + subtasks
+   bd create "Epic title" -t epic --json
+   bd create "Subtask" --parent <epic-id> --json
+
 2. per agent cycle:
-   - bd pin <subtask> --for agent-N --start
+   - bd update <subtask-id> --claim --json
    - spawn agent via Task tool
-   - agent: bd reserve <files> --for agent-N
-   - agent: work → bd close <id>
+   - agent: work
+   - agent: bd close <id> --json
    - agent: bd mail send orchestrator "done:<id>"
    - orchestrator: bd mail inbox → review bd show <id>
-   - PASS: checkpoint-write.sh <id> → pin next task
-   - FAIL: bd reopen <id> → bd pin <id> --for agent-N
+   - PASS: checkpoint-write.sh <id> → claim next subtask
+   - FAIL: bd reopen <id> → bd update <id> --claim --json
 ```
 
 ### LARGE
