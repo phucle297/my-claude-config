@@ -1,0 +1,23 @@
+{
+  "skill_name": "html-report",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a report about our frontend refactoring plan. We're migrating from Vue 2 Options API to Vue 3 Composition API. 15 components need migration. 5 are high priority (checkout flow), 7 medium (product pages), 3 low (admin settings). Timeline is 3 sprints. Include risks and dependencies.",
+      "expected_output": "A well-structured HTML report with sections for overview, component inventory table, priority breakdown, timeline, risks, and dependencies. Should use color-coded badges for priority levels.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Generate a status report for the Q2 backend API performance audit. Key findings: p99 latency on /api/orders went from 800ms to 2.3s after the May deploy. Root cause: N+1 query in OrderService.getWithItems(). Fix deployed June 1, latency back to 750ms. Also found 3 endpoints without rate limiting. Audience is engineering leadership.",
+      "expected_output": "Executive-summary-first HTML report with before/after metrics, root cause analysis, fix details, and remaining action items. Should include a summary box at top, tables for metrics, and status badges.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I need a comparison document for 3 database options we're evaluating: PostgreSQL, MongoDB, and DynamoDB. Compare on: cost (low/medium/high), scalability, query flexibility, team expertise, managed service availability. We're building a multi-tenant SaaS with ~50k users. Our team knows SQL well but has limited NoSQL experience.",
+      "expected_output": "Multi-section HTML document with comparison table, pros/cons cards for each option, recommendation section. Should visually highlight the recommended option. Clean, scannable layout.",
+      "files": []
+    }
+  ]
+}

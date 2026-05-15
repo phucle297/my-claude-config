@@ -56,12 +56,14 @@ Before any task touching >5 files:
 2. **Run quality gates** (if code changed) — tests, linters, builds
 3. **Update issue status** — close finished work, reopen failed items
 4. **PUSH TO REMOTE** — MANDATORY:
+
    ```bash
    git pull --rebase
    bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
+
 5. **Clean up** — clear stashes, prune remote branches
 6. **Verify** — all changes committed AND pushed
 7. **Hand off** — provide context for next session

@@ -2,14 +2,12 @@
   "skillListingBudgetFraction": 0.03,
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "ANTHROPIC_CUSTOM_MODEL_OPTION": "claude-opus-4-6",
     "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
   },
-  "model": "claude-opus-4-6",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "edit_file|write_file|str_replace_based_edit|bash",
+        "matcher": "Edit|Write|MultiEdit|Bash",
         "hooks": [
           {
             "type": "command",
@@ -58,7 +56,9 @@
   "enabledPlugins": {
     "caveman@caveman": true,
     "beads@beads-marketplace": true,
-    "atlassian@claude-plugins-official": true
+    "atlassian@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "figma@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
@@ -81,13 +81,11 @@
   "verbose": false,
   "autoCompactEnabled": false,
   "teammateMode": "tmux",
-  "useAutoModeDuringPlat": true,
-  "autoCompact": false,
-  "autoApproveTools": [
-    "beads:*",
-    "agent-mail:*",
-    "mempalace:*"
-  ],
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"/home/permees/.claude/plugins/cache/caveman/caveman/ef6050c5e184/hooks/caveman-statusline.sh\""
+  },
+  "autoApproveTools": ["beads:*", "agent-mail:*", "mempalace:*"],
   "mcpServers": {
     "mcp-agent-mail": {
       "type": "http",
@@ -95,6 +93,11 @@
       "headers": {
         "Authorization": "Bearer 8d4d6622a97c7e5d67d555f24e52e857b178bc817e8c9c9322c429bd1f1566b5"
       }
+    },
+    "mempalace": {
+      "type": "stdio",
+      "command": "mempalace",
+      "args": ["mcp"]
     }
   }
 }

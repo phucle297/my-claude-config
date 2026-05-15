@@ -13,9 +13,18 @@ bd kv set checkpoint:current $ID
 echo "## Last Checkpoint
 search: $KEYS
 queue: $QUEUE
-next: $NEXT" > .beads/PRIME.md
+next: $NEXT" >.beads/PRIME.md
 
 # Save the checkpoint address to diary file
 DIARY=~/.claude/memory/diary.md
 mkdir -p "$(dirname "$DIARY")"
-echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) checkpoint: bd kv get checkpoint:$ID | mempalace_search $KEYS" >> "$DIARY"
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) checkpoint: bd kv get checkpoint:$ID | mempalace_search $KEYS" >>"$DIARY"
+
+# Auto-close parent if all children are closed
+PARENT=$(bd show "$ID" --json | jq -r '(if type == "array" then .[0] else . end) | .parent_id // ""')
+if [ -n "$PARENT" ]; then
+  OPEN_SIBS=$(bd list --parent "$PARENT" --json 2>/dev/null | jq '[.[] | select(.status != "closed")] | length')
+  if [ "$OPEN_SIBS" = "0" ]; then
+    bd close "$PARENT" --reason="all children closed" 2>/dev/null
+  fi
+fi
