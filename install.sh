@@ -9,8 +9,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-info()  { echo -e "${GREEN}[ok]${NC} $1"; }
-warn()  { echo -e "${YELLOW}[warn]${NC} $1"; }
+info() { echo -e "${GREEN}[ok]${NC} $1"; }
+warn() { echo -e "${YELLOW}[warn]${NC} $1"; }
 error() { echo -e "${RED}[error]${NC} $1" >&2; }
 
 check_deps() {
@@ -95,7 +95,7 @@ print_next_steps() {
   echo ""
   echo "  cd ~/Projects/<org>/<project>"
   echo "  mkdir -p .claude .beads"
-  echo "  cp ~/.claude/CLAUDE_TEMPLATE_PROJECT.md .claude/CLAUDE.md"
+  echo "  cp ~/.claude/CLAUDE_TEMPLATE_PROJECT.md CLAUDE.md"
   echo "  touch .beads/PRIME.md"
   echo "  bd init"
   echo "  mempalace --palace ~/.mempalace/<project> init ."

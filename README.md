@@ -100,8 +100,11 @@ curl -L https://github.com/dolthub/dolt/releases/latest/download/install.sh | ba
 ### 3. beads (bd CLI)
 
 ```bash
-# After Claude Code is installed:
-claude plugin install beads@beads-marketplace
+curl -sSL https://raw.githubusercontent.com/gastownhall/beads/main/scripts/install.sh | bash
+
+# In Claude Code
+/plugin marketplace add gastownhall/beads
+/plugin install beads
 ```
 
 Repo: <https://github.com/gastownhall/beads>
@@ -113,6 +116,14 @@ curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/mcp_agent_mail/m
 ```
 
 Installs both `bv` (coupling analyzer) and `mcp-agent-mail` MCP server. Flag `--skip-beads` is needed because i want to use the original beads plugin, not the modified one bundled `beads-rust` with mcp_agent_mail.
+
+Add alias
+
+```fish/bash/zsh
+# >>> MCP Agent Mail alias
+alias am='cd "/root/.local/share/mcp_agent_mail" && scripts/run_server_with_token.sh'
+# <<< MCP Agent Mail alias
+```
 
 ### 5. mempalace
 
