@@ -222,6 +222,8 @@ claude plugin install caveman@caveman
 claude plugin install atlassian@claude-plugins-official
 ```
 
+Install manually plugins
+
 ## Verify
 
 ```bash
@@ -238,7 +240,7 @@ which bd bv mempalace jq             # all binaries found
 ```bash
 mempalace-mcp --help    # confirm binary exists
 claude mcp remove mempalace -s local
-claude mcp add mempalace -s local -- mempalace-mcp --palace ~/.mempalace/<project>
+claude mcp add mempalace -- mempalace-mcp
 ```
 
 **mempalace "No palace found":**
