@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/scripts/session-end.sh && mempalace mine ~/.claude/projects --mode convos && mempalace sweep ~/.claude/projects"
+            "command": "nohup bash -c '~/.claude/scripts/session-end.sh && mempalace mine ~/.claude/projects --mode convos && mempalace sweep ~/.claude/projects' > /tmp/claude-session-end.log 2>&1 &"
           }
         ]
       }
