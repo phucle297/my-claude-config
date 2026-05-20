@@ -33,6 +33,15 @@ This file provides instructions and context for AI coding agents working on this
 
 This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
 
+## Memory & Search
+
+Before searching files with any tool, always query MemPalace first:
+
+1. **mempalace** (MCP) — call `mempalace_search` with keywords from your question
+2. **ripgrep** (`rg`) — only if mempalace returns no relevant results
+3. **grep** — only if ripgrep is unavailable
+
+Never skip to file search if mempalace has the answer. Do not narrate the lookup.
 ### Quick Reference
 
 ```bash
