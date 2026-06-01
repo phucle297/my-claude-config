@@ -6,6 +6,9 @@ You are an orchestrator. Decompose work. Delegate. Do not implement.
 
 ## Memory Protocol
 
+> Only applies when `mempalace` MCP is registered (`claude mcp list | grep mempalace`).
+> Hook auto-detects and skips injection if not registered.
+
 - Before answering about person, project, or past decision → `mempalace_search` first
 - After significant task or new convention learned → `mempalace_add_drawer`
 - Structured facts (ownership, tech decisions, deps) → `mempalace_kg_add`
@@ -144,7 +147,7 @@ Script does:
 2. `bd kv set checkpoint:<id> <keys+queue+next>`
 3. `bd kv set checkpoint:current <id>`
 4. Update `.beads/PRIME.md` with latest keys
-5. `mempalace_diary_write` with kv address only (not content)
+5. Append kv address to `~/.claude/memory/diary.md` (local file, not MCP call)
 
 Rules:
 

@@ -181,7 +181,7 @@ install_file() {
 # ---------------------------------------------------------------------------
 
 setup_claude_dirs() {
-  mkdir -p "$CLAUDE_DIR/scripts" "$CLAUDE_DIR/agents" "$CLAUDE_DIR/memory"
+  mkdir -p "$CLAUDE_DIR/scripts" "$CLAUDE_DIR/agents" "$CLAUDE_DIR/memory" "$CLAUDE_DIR/hooks"
   info "Claude dirs ready"
 }
 
@@ -196,6 +196,15 @@ install_scripts() {
 install_agents() {
   for f in "$SCRIPT_DIR/agents/"*.md; do
     install_file "$f" "$CLAUDE_DIR/agents/$(basename "$f")"
+  done
+}
+
+install_hooks() {
+  for f in "$SCRIPT_DIR/hooks/"*.sh "$SCRIPT_DIR/hooks/"*.js; do
+    [ -f "$f" ] || continue
+    local dst="$CLAUDE_DIR/hooks/$(basename "$f")"
+    install_file "$f" "$dst"
+    [[ "$f" == *.sh ]] && chmod +x "$dst"
   done
 }
 
@@ -284,6 +293,9 @@ print_claude_next_steps() {
   echo ""
   echo "=== Claude Code setup done ==="
   echo ""
+  echo "Start agent-mail server (required for inbox hooks):"
+  echo "  cd ~/.local/share/mcp_agent_mail && uv run python -m mcp_agent_mail.server &"
+  echo ""
   echo "Per-project setup (run once per repo):"
   echo "  cd ~/Projects/<org>/<project>"
   echo "  mkdir -p .claude .beads && touch .beads/PRIME.md"
@@ -334,6 +346,7 @@ main() {
       install_claude_md
       install_scripts
       install_agents
+      install_hooks
       install_settings
       install_claude_plugins
       print_claude_next_steps
@@ -356,6 +369,7 @@ main() {
       install_claude_md
       install_scripts
       install_agents
+      install_hooks
       install_settings
       install_claude_plugins
       print_claude_next_steps

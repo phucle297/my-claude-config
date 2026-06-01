@@ -5,9 +5,10 @@ set -uo pipefail
 
 PROJECT="$PWD"
 AGENT="RedPond"
-URL="http://127.0.0.1:8765/api/"
-BEARER="dc5029ac32a9f350508a565af683205cf99f25c896b07c07bc53a9517877ce8c"
-TOKEN_STORE="/home/permees/.claude/hooks/agent_mail_tokens.env"
+URL="${AGENT_MAIL_URL:-http://127.0.0.1:8765/api/}"
+BEARER="${AGENT_MAIL_TOKEN:-aabebf4faba1f9f9bedf133a0cb1ff71d1a8d406903a7881951336beb798b8a6}"
+MODEL="${AGENT_MAIL_MODEL:-claude-sonnet-4-6}"
+TOKEN_STORE="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/agent_mail_tokens.env"
 
 SLUG=$(printf '%s' "$PROJECT" | tr '/' '-' | tr -cd 'a-zA-Z0-9-')
 TOKEN_FILE="/tmp/mcp-regtoken-${SLUG}"
@@ -17,9 +18,9 @@ STORED_TOKEN=$(grep -m1 "^${SLUG}=" "$TOKEN_STORE" 2>/dev/null | cut -d= -f2- ||
 
 # Build args — pass registration_token if we have one
 if [[ -n "$STORED_TOKEN" ]]; then
-  MACRO_ARGS="{\"human_key\":$(printf '%s' "$PROJECT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),\"program\":\"claude-code\",\"model\":\"claude-sonnet-4-6\",\"agent_name\":\"$AGENT\",\"registration_token\":$(printf '%s' "$STORED_TOKEN" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}"
+  MACRO_ARGS="{\"human_key\":$(printf '%s' "$PROJECT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),\"program\":\"claude-code\",\"model\":\"$MODEL\",\"agent_name\":\"$AGENT\",\"registration_token\":$(printf '%s' "$STORED_TOKEN" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}"
 else
-  MACRO_ARGS="{\"human_key\":$(printf '%s' "$PROJECT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),\"program\":\"claude-code\",\"model\":\"claude-sonnet-4-6\",\"agent_name\":\"$AGENT\"}"
+  MACRO_ARGS="{\"human_key\":$(printf '%s' "$PROJECT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),\"program\":\"claude-code\",\"model\":\"$MODEL\",\"agent_name\":\"$AGENT\"}"
 fi
 
 RESPONSE=$(curl -s --max-time 5 -X POST "$URL" \

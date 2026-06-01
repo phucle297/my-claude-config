@@ -230,7 +230,7 @@ if (ok) {
     await agent(
       `Run these commands:\n` +
       `1. bd close ${taskId} "verified: adversarial-verify passed" --json\n` +
-      `2. $OMO_SCRIPTS/checkpoint-write.sh ${taskId}`,
+      `2. \${OMO_SCRIPTS:-~/.claude/scripts}/checkpoint-write.sh ${taskId}`,
       { label: 'close-task', phase: 'Result' }
     )
   }

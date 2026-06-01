@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "SLUG=$(printf '%s' \"$PWD\" | tr '/' '-' | tr -cd 'a-zA-Z0-9-'); REG_TOKEN=$(cat \"/tmp/mcp-regtoken-${SLUG}\" 2>/dev/null || echo ''); AGENT_MAIL_PROJECT=\"$PWD\" AGENT_MAIL_AGENT='RedPond' AGENT_MAIL_URL='http://127.0.0.1:8765/api/' AGENT_MAIL_TOKEN='dc5029ac32a9f350508a565af683205cf99f25c896b07c07bc53a9517877ce8c' AGENT_MAIL_REGISTRATION_TOKEN=\"$REG_TOKEN\" AGENT_MAIL_HOOK_FORMAT='json' AGENT_MAIL_INTERVAL='120' '/home/permees/.claude/hooks/check_inbox.sh' 2>/dev/null || true",
+            "command": "SLUG=$(printf '%s' \"$PWD\" | tr '/' '-' | tr -cd 'a-zA-Z0-9-'); REG_TOKEN=$(cat \"/tmp/mcp-regtoken-${SLUG}\" 2>/dev/null || echo ''); AGENT_MAIL_PROJECT=\"$PWD\" AGENT_MAIL_AGENT='RedPond' AGENT_MAIL_URL='http://127.0.0.1:8765/api/' AGENT_MAIL_TOKEN='aabebf4faba1f9f9bedf133a0cb1ff71d1a8d406903a7881951336beb798b8a6' AGENT_MAIL_REGISTRATION_TOKEN=\"$REG_TOKEN\" AGENT_MAIL_HOOK_FORMAT='json' AGENT_MAIL_INTERVAL='120' '/home/permees/.claude/hooks/check_inbox.sh' 2>/dev/null || true",
             "async": true
           }
         ]
@@ -76,7 +76,6 @@
     "context7@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
     "skill-creator@claude-plugins-official": true,
-    "atlassian@claude-plugins-official": true,
     "caveman@caveman": true
   },
   "extraKnownMarketplaces": {

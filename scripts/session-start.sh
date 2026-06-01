@@ -2,6 +2,7 @@
 # Load last checkpoint and reload context
 bd where >/dev/null 2>&1 || exit 0
 
+bd prime
 LAST_ID=$(bd kv get checkpoint:current 2>/dev/null)
 if [ -n "$LAST_ID" ]; then
   CHECKPOINT=$(bd kv get checkpoint:$LAST_ID 2>/dev/null)
@@ -9,5 +10,4 @@ if [ -n "$LAST_ID" ]; then
   echo "$CHECKPOINT"
   echo "=================="
 fi
-bd prime
 bd ready --json
