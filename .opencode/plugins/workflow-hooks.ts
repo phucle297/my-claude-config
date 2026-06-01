@@ -34,9 +34,14 @@ export const WorkflowHooks: Plugin = async ({ $, directory }) => {
   return {
     event: async ({ event }) => {
       if (event.type === "session.created") {
-        const script = join(SCRIPTS_DIR, "session-start.sh")
-        if (existsSync(script)) {
-          await $`bash ${script}`.cwd(directory).nothrow().quiet()
+        const startScript = join(SCRIPTS_DIR, "session-start.sh")
+        if (existsSync(startScript)) {
+          await $`bash ${startScript}`.cwd(directory).nothrow().quiet()
+        }
+        // Register agent-mail (mirrors Claude Code SessionStart hook)
+        const registerScript = join(CLAUDE_HOOKS, "agent_mail_register.sh")
+        if (existsSync(registerScript)) {
+          await $`bash ${registerScript}`.cwd(directory).nothrow().quiet()
         }
       }
 

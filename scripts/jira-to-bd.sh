@@ -48,14 +48,16 @@ TITLE="$DATE_PREFIX [$JIRA_KEY]"
 CREATE_ARGS=(
   --title "$TITLE"
   --external-ref "$JIRA_KEY"
-  --silent
+  --json
 )
 
 if [ -n "$PARENT_ID" ]; then
   CREATE_ARGS+=(--parent "$PARENT_ID")
 fi
 
-NEW_ID=$(bd create "${CREATE_ARGS[@]}" 2>/dev/null)
+RAW=$(bd create "${CREATE_ARGS[@]}" 2>/dev/null)
+# bd create --json may output {"id":"..."} or plain id string
+NEW_ID=$(echo "$RAW" | jq -r '.id // .[0].id // empty' 2>/dev/null || echo "$RAW" | tr -d '"' | head -1)
 
 if [ -z "$NEW_ID" ]; then
   echo "ERROR: bd create failed for $JIRA_KEY" >&2

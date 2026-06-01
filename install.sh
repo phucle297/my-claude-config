@@ -4,6 +4,8 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
 OPENCODE_DIR="$HOME/.config/opencode"
+CURSOR_DIR="$HOME/.cursor"
+CODEX_DIR="$HOME/.codex"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -15,8 +17,6 @@ info()  { echo -e "${GREEN}[ok]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[warn]${NC} $1"; }
 error() { echo -e "${RED}[error]${NC} $1" >&2; }
 step()  { echo -e "\n${BLUE}==>${NC} $1"; }
-
-MODE="${1:-all}"  # all | claude | opencode | deps
 
 # ---------------------------------------------------------------------------
 # OS detection
@@ -30,7 +30,6 @@ IS_WSL=false
 has() { command -v "$1" &>/dev/null; }
 
 pkg_install() {
-  # Install system package — Linux (apt) or macOS (brew)
   if [[ "$OS" == "Darwin" ]]; then
     if has brew; then
       HOMEBREW_NO_AUTO_UPDATE=1 brew install "$@" || warn "brew install $* failed"
@@ -68,7 +67,6 @@ ensure_node() {
   step "Installing Node.js via fnm..."
   if ! has fnm; then
     curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell 2>/dev/null || true
-    # Try to source fnm for current session
     export PATH="$HOME/.local/share/fnm:$PATH"
     eval "$(fnm env --use-on-cd 2>/dev/null)" 2>/dev/null || true
   fi
@@ -120,7 +118,6 @@ ensure_bv_mcp() {
 
 ensure_mempalace() {
   has mempalace && { info "mempalace already installed"; return; }
-  # mempalace has no standard curl install — guide user
   warn "mempalace not found. Install manually: https://github.com/mempalace/mempalace"
   warn "After install, run: mempalace --palace ~/.mempalace/<project> init ."
 }
@@ -157,8 +154,6 @@ install_all_deps() {
   ensure_beads
   ensure_bv_mcp
   ensure_mempalace
-  ensure_opencode
-  ensure_omo
 }
 
 # ---------------------------------------------------------------------------
@@ -176,6 +171,15 @@ install_file() {
   fi
 }
 
+install_scripts_to() {
+  local dest="$1"
+  for f in "$SCRIPT_DIR/scripts/"*.sh; do
+    local dst="$dest/$(basename "$f")"
+    install_file "$f" "$dst"
+    chmod +x "$dst"
+  done
+}
+
 # ---------------------------------------------------------------------------
 # Claude Code config
 # ---------------------------------------------------------------------------
@@ -185,13 +189,7 @@ setup_claude_dirs() {
   info "Claude dirs ready"
 }
 
-install_scripts() {
-  for f in "$SCRIPT_DIR/scripts/"*.sh; do
-    local dst="$CLAUDE_DIR/scripts/$(basename "$f")"
-    install_file "$f" "$dst"
-    chmod +x "$dst"
-  done
-}
+install_claude_scripts() { install_scripts_to "$CLAUDE_DIR/scripts"; }
 
 install_agents() {
   for f in "$SCRIPT_DIR/agents/"*.md; do
@@ -234,6 +232,25 @@ install_claude_plugins() {
   info "Claude plugins installed"
 }
 
+print_claude_next_steps() {
+  echo ""
+  echo "=== Claude Code setup done ==="
+  echo ""
+  echo "Start agent-mail server (required for inbox hooks):"
+  echo "  cd ~/.local/share/mcp_agent_mail && uv run python -m mcp_agent_mail.server &"
+  echo ""
+  echo "Per-project setup (run once per repo):"
+  echo "  cd ~/Projects/<org>/<project>"
+  echo "  mkdir -p .claude .beads && touch .beads/PRIME.md"
+  echo "  cp ~/.claude/CLAUDE_TEMPLATE_PROJECT.md CLAUDE.md"
+  echo "  bd init"
+  echo "  mempalace --palace ~/.mempalace/<project> init ."
+  echo "  claude mcp add mempalace -s local -- mempalace-mcp --palace ~/.mempalace/<project>"
+  echo ""
+  echo "Verify:"
+  echo "  claude mcp list && bd status"
+}
+
 # ---------------------------------------------------------------------------
 # OpenCode + omo config
 # ---------------------------------------------------------------------------
@@ -242,6 +259,8 @@ setup_opencode_dirs() {
   mkdir -p "$OPENCODE_DIR/scripts" "$OPENCODE_DIR/plugins"
   info "OpenCode dirs ready"
 }
+
+install_opencode_scripts() { install_scripts_to "$OPENCODE_DIR/scripts"; }
 
 install_omo_config() {
   local src="$SCRIPT_DIR/.opencode/oh-my-openagent.json"
@@ -262,24 +281,12 @@ install_omo_config() {
   fi
 }
 
-install_opencode_scripts() {
-  for f in "$SCRIPT_DIR/scripts/"*.sh; do
-    local dst="$OPENCODE_DIR/scripts/$(basename "$f")"
-    if [ ! -f "$dst" ]; then
-      cp -f "$f" "$dst"
-      chmod +x "$dst"
-      info "Installed $dst"
-    fi
-  done
-}
-
 install_opencode_plugins() {
   for f in "$SCRIPT_DIR/.opencode/plugins/"*; do
     [ -f "$f" ] || continue
     local dst="$OPENCODE_DIR/plugins/$(basename "$f")"
     install_file "$f" "$dst"
   done
-  # Ensure @opencode-ai/plugin dep is installed
   if [ ! -f "$OPENCODE_DIR/package.json" ]; then
     printf '{\n  "dependencies": {\n    "@opencode-ai/plugin": "latest"\n  }\n}\n' > "$OPENCODE_DIR/package.json"
     info "Created $OPENCODE_DIR/package.json"
@@ -302,32 +309,9 @@ suggest_shell_rc() {
   echo "  export OPENCODE_PROJECT_SLUG=\"<project>\""
 }
 
-# ---------------------------------------------------------------------------
-# Next steps
-# ---------------------------------------------------------------------------
-
-print_claude_next_steps() {
-  echo ""
-  echo "=== Claude Code setup done ==="
-  echo ""
-  echo "Start agent-mail server (required for inbox hooks):"
-  echo "  cd ~/.local/share/mcp_agent_mail && uv run python -m mcp_agent_mail.server &"
-  echo ""
-  echo "Per-project setup (run once per repo):"
-  echo "  cd ~/Projects/<org>/<project>"
-  echo "  mkdir -p .claude .beads && touch .beads/PRIME.md"
-  echo "  cp ~/.claude/CLAUDE_TEMPLATE_PROJECT.md CLAUDE.md"
-  echo "  bd init"
-  echo "  mempalace --palace ~/.mempalace/<project> init ."
-  echo "  claude mcp add mempalace -s local -- mempalace-mcp --palace ~/.mempalace/<project>"
-  echo ""
-  echo "Verify:"
-  echo "  claude mcp list && bd status"
-}
-
 print_opencode_next_steps() {
   echo ""
-  echo "=== OpenCode setup done ==="
+  echo "=== OpenCode + omo setup done ==="
   echo ""
   echo "Per-project setup (run once per repo):"
   echo "  cd ~/Projects/<org>/<project>"
@@ -346,22 +330,99 @@ print_opencode_next_steps() {
 }
 
 # ---------------------------------------------------------------------------
-# main
+# Cursor config
 # ---------------------------------------------------------------------------
 
-main() {
-  case "$MODE" in
-    deps)
-      echo "=== Installing all dependencies ==="
-      install_all_deps
-      ;;
+setup_cursor_dirs() {
+  mkdir -p "$CURSOR_DIR/scripts"
+  info "Cursor dirs ready"
+}
+
+install_cursor_scripts() { install_scripts_to "$CURSOR_DIR/scripts"; }
+
+install_cursor_rules() {
+  # Cursor uses .cursor/rules/*.mdc per-project (not a global file path).
+  # We stage a .mdc template at ~/.cursor/workflow-template.mdc for users to copy.
+  local dst="$CURSOR_DIR/workflow-template.mdc"
+  if [ -f "$dst" ]; then
+    warn "Skipping $dst (exists). Backup first or remove manually."
+    return
+  fi
+  {
+    printf -- '---\ndescription: AI orchestrator workflow — bd task tracking, session protocol, quality gates\nalwaysApply: true\n---\n\n'
+    cat "$SCRIPT_DIR/CLAUDE.md"
+  } > "$dst"
+  info "Installed $dst"
+}
+
+print_cursor_next_steps() {
+  echo ""
+  echo "=== Cursor setup done ==="
+  echo ""
+  echo "Scripts installed to: $CURSOR_DIR/scripts/"
+  echo "Workflow rules template: $CURSOR_DIR/workflow-template.mdc"
+  echo ""
+  echo "Per-project setup (run once per repo):"
+  echo "  cd ~/Projects/<org>/<project>"
+  echo "  mkdir -p .cursor/rules .beads && touch .beads/PRIME.md"
+  echo "  cp ~/.cursor/workflow-template.mdc .cursor/rules/workflow.mdc"
+  echo "  bd init"
+  echo "  mempalace --palace ~/.mempalace/<project> init ."
+  echo ""
+  echo "MCP config: create .cursor/mcp.json in each project:"
+  echo "  {"
+  echo "    \"mcpServers\": {"
+  echo "      \"mempalace\": { \"command\": \"mempalace-mcp\", \"args\": [\"--palace\", \"~/.mempalace/<project>\"] }"
+  echo "    }"
+  echo "  }"
+  echo ""
+  echo "Note: Cursor global rules go in Settings → Rules for AI (not file-based)."
+  echo "  .cursor/rules/ is project-level only."
+  echo ""
+  echo "Set env var (add to shell rc):"
+  echo "  export CURSOR_SCRIPTS=\"\$HOME/.cursor/scripts\""
+}
+
+# ---------------------------------------------------------------------------
+# Codex config
+# ---------------------------------------------------------------------------
+
+setup_codex_dirs() {
+  mkdir -p "$CODEX_DIR/scripts"
+  info "Codex dirs ready"
+}
+
+install_codex_scripts() { install_scripts_to "$CODEX_DIR/scripts"; }
+
+install_codex_instructions() {
+  install_file "$SCRIPT_DIR/AGENTS.md" "$CODEX_DIR/instructions.md"
+}
+
+print_codex_next_steps() {
+  echo ""
+  echo "=== Codex setup done ==="
+  echo ""
+  echo "Per-project setup (run once per repo):"
+  echo "  cd ~/Projects/<org>/<project>"
+  echo "  cp ~/.codex/instructions.md AGENTS.md"
+  echo "  bd init && touch .beads/PRIME.md"
+  echo "  mempalace --palace ~/.mempalace/<project> init ."
+  echo ""
+  echo "Set env var (add to shell rc):"
+  echo "  export CODEX_SCRIPTS=\"\$HOME/.codex/scripts\""
+}
+
+# ---------------------------------------------------------------------------
+# Platform dispatch
+# ---------------------------------------------------------------------------
+
+install_platform() {
+  case "$1" in
     claude)
-      echo "=== Claude Code Config Installer ==="
-      echo ""
-      install_all_deps
+      step "Configuring Claude Code..."
       setup_claude_dirs
       install_claude_md
-      install_scripts
+      install_claude_scripts
       install_agents
       install_hooks
       install_settings
@@ -369,42 +430,154 @@ main() {
       print_claude_next_steps
       ;;
     opencode)
-      echo "=== OpenCode + omo Config Installer ==="
-      echo ""
-      install_all_deps
+      step "Configuring OpenCode + omo..."
+      ensure_opencode
+      ensure_omo
       setup_opencode_dirs
       install_omo_config
       install_opencode_scripts
       install_opencode_plugins
       print_opencode_next_steps
       ;;
-    all)
-      echo "=== Full Config Installer (Claude Code + OpenCode) ==="
-      echo ""
-      install_all_deps
-      setup_claude_dirs
-      install_claude_md
-      install_scripts
-      install_agents
-      install_hooks
-      install_settings
-      install_claude_plugins
-      print_claude_next_steps
-
-      echo ""
-      echo "---"
-      setup_opencode_dirs
-      install_omo_config
-      install_opencode_scripts
-      install_opencode_plugins
-      print_opencode_next_steps
+    cursor)
+      step "Configuring Cursor..."
+      setup_cursor_dirs
+      install_cursor_scripts
+      install_cursor_rules
+      print_cursor_next_steps
+      ;;
+    codex)
+      step "Configuring Codex..."
+      setup_codex_dirs
+      install_codex_scripts
+      install_codex_instructions
+      print_codex_next_steps
       ;;
     *)
-      error "Unknown mode: $MODE"
-      echo "Usage: ./install.sh [all|claude|opencode|deps]"
+      error "Unknown platform: $1"
+      echo "Valid: claude | opencode | cursor | codex" >&2
       exit 1
       ;;
   esac
 }
 
-main
+# ---------------------------------------------------------------------------
+# Interactive detection + multi-select
+# ---------------------------------------------------------------------------
+
+# Populates SELECTED_PLATFORMS array via interactive menu.
+# Sets global SELECTED_PLATFORMS.
+SELECTED_PLATFORMS=()
+
+interactive_select() {
+  local -a tools=("claude" "opencode" "cursor" "codex")
+  local -a labels=("Claude Code" "OpenCode + omo" "Cursor IDE" "OpenAI Codex CLI")
+  local -a detected=(false false false false)
+
+  has claude   && detected[0]=true
+  has opencode && detected[1]=true
+  has cursor   && detected[2]=true
+  has codex    && detected[3]=true
+
+  echo "Detected AI coding tools on this system:"
+  echo ""
+  local i
+  for i in "${!tools[@]}"; do
+    if ${detected[$i]}; then
+      echo -e "  [$(( i + 1 ))] ${GREEN}${labels[$i]}${NC}  ✓ installed"
+    else
+      echo "  [$(( i + 1 ))] ${labels[$i]}  (not found in PATH)"
+    fi
+  done
+  echo ""
+  echo "Enter numbers to configure (e.g. '1', '1 2', '1,2')."
+  echo "Press Enter to configure all detected tools."
+  echo -n "> "
+
+  local selection
+  read -r selection
+
+  SELECTED_PLATFORMS=()
+
+  if [ -z "$selection" ]; then
+    for i in "${!tools[@]}"; do
+      ${detected[$i]} && SELECTED_PLATFORMS+=("${tools[$i]}")
+    done
+    if [ ${#SELECTED_PLATFORMS[@]} -eq 0 ]; then
+      warn "No tools detected in PATH. Defaulting to Claude Code."
+      SELECTED_PLATFORMS=("claude")
+    fi
+  else
+    local num idx
+    for num in $(echo "$selection" | tr ',' ' '); do
+      if [[ "$num" =~ ^[0-9]+$ ]]; then
+        idx=$(( num - 1 ))
+        if [ "$idx" -ge 0 ] && [ "$idx" -lt "${#tools[@]}" ]; then
+          SELECTED_PLATFORMS+=("${tools[$idx]}")
+        else
+          warn "Ignoring out-of-range selection: $num"
+        fi
+      fi
+    done
+    if [ ${#SELECTED_PLATFORMS[@]} -eq 0 ]; then
+      error "No valid selection. Exiting."
+      exit 1
+    fi
+  fi
+
+  echo ""
+  echo "Will configure: ${SELECTED_PLATFORMS[*]}"
+  echo ""
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+main() {
+  if [ $# -eq 0 ]; then
+    echo "=== AI Agent Config Installer ==="
+    echo ""
+    install_all_deps
+    interactive_select
+    local platform
+    for platform in "${SELECTED_PLATFORMS[@]}"; do
+      echo ""
+      echo "---"
+      install_platform "$platform"
+    done
+
+  else
+    case "$1" in
+      deps)
+        echo "=== Installing all dependencies ==="
+        install_all_deps
+        return
+        ;;
+      all)
+        # Legacy shorthand — install claude + opencode
+        echo "=== Full Config Installer (Claude Code + OpenCode) ==="
+        echo ""
+        install_all_deps
+        ensure_opencode
+        ensure_omo
+        install_platform claude
+        echo ""
+        echo "---"
+        install_platform opencode
+        return
+        ;;
+    esac
+
+    # One or more explicit platforms: ./install.sh claude opencode
+    install_all_deps
+    local platform
+    for platform in "$@"; do
+      echo ""
+      echo "---"
+      install_platform "$platform"
+    done
+  fi
+}
+
+main "$@"

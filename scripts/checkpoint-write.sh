@@ -1,8 +1,9 @@
 #!/bin/bash
-ID=$1
+ID="${1:-}"
+[ -z "$ID" ] && { echo "ERROR: ID required. Usage: checkpoint-write.sh <bd-id>" >&2; exit 1; }
 # Extract keys from bd task
-KEYS=$(bd show $ID --json | jq -r '(if type == "array" then .[0] else . end) | [.title, (.labels // [] | .[])] | join(" ")')
-QUEUE=$(bd children $ID --json 2>/dev/null | jq -r '[.[]|select(.status!="closed")|.id] | join(" ")')
+KEYS=$(bd show "$ID" --json 2>/dev/null | jq -r '(if type == "array" then .[0] else . end) | [.title, (.labels // [] | .[])] | join(" ")' 2>/dev/null || echo "")
+QUEUE=$(bd children "$ID" --json 2>/dev/null | jq -r '[.[]|select(.status!="closed")|.id] | join(" ")' 2>/dev/null || echo "")
 NEXT=$(bd ready --json | jq -r '.[0].id // ""')
 
 PAYLOAD="{\"search_keys\":\"$KEYS\",\"queue\":\"$QUEUE\",\"next\":\"$NEXT\"}"

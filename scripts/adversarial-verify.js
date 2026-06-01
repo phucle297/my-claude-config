@@ -207,18 +207,20 @@ if (critic?.verdict === 'incomplete') {
 
 ok = eval1.ok && critic?.verdict === 'complete'
 
-// Phase: Retry (if failed and retries remain)
-if (!ok && maxRetries > 0) {
-  log(`Verify failed (${allFindings.length} total findings). Retrying...`)
+// Phase: Retry (loop up to maxRetries times if still failing)
+let retriesLeft = maxRetries
+while (!ok && retriesLeft > 0) {
+  retriesLeft--
+  log(`Verify failed (${allFindings.length} total findings). Retrying... (${retriesLeft} left after this)`)
   phase('Retry')
   impl = await doImplement(desc, allFindings)
 
-  const votes2  = await doVerify(impl)
-  const eval2   = evalVotes(votes2)
-  const critic2 = await doCompletenessCritic(impl, eval2.findings)
+  const votesR  = await doVerify(impl)
+  const evalR   = evalVotes(votesR)
+  const criticR = await doCompletenessCritic(impl, evalR.findings)
 
-  ok          = eval2.ok && critic2?.verdict === 'complete'
-  allFindings = dedup([...eval2.findings, ...(critic2?.gaps ?? []).map(g => ({ issue: g }))])
+  ok          = evalR.ok && criticR?.verdict === 'complete'
+  allFindings = dedup([...evalR.findings, ...(criticR?.gaps ?? []).map(g => ({ issue: g }))])
 }
 
 // Phase: Result
