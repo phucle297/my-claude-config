@@ -277,6 +277,125 @@ Session end
 
 ---
 
+## Examples
+
+### Fix a bug (SMALL task)
+
+```bash
+# 1. Create task
+bd create "Fix login redirect loop on mobile" --json
+# → my-app-4xz
+
+# 2. Score + claim
+~/.config/opencode/scripts/score-task.sh my-app-4xz
+# → SMALL
+
+bd update my-app-4xz --claim --json
+
+# 3. Open OpenCode and describe the fix
+opencode
+# prompt: "Fix login redirect loop on mobile. Task my-app-4xz claimed."
+
+# 4. Close + checkpoint
+bd close my-app-4xz "fixed: check for existing session before redirect" --json
+~/.config/opencode/scripts/checkpoint-write.sh my-app-4xz
+```
+
+---
+
+### Build a feature (MEDIUM task — parallel agents)
+
+```bash
+# 1. Intake
+bd create "Add dark mode toggle to settings page" --json
+# → my-app-7kp
+
+# 2. Score → MEDIUM
+~/.config/opencode/scripts/score-task.sh my-app-7kp
+
+# 3. Decompose into epic + subtasks
+bd create "Dark mode epic" -t epic --json           # → my-app-8aa
+bd create "Add CSS variables for theme"  --parent my-app-8aa --json   # → my-app-8ab
+bd create "Build toggle component"       --parent my-app-8aa --json   # → my-app-8ac
+bd create "Persist preference to localStorage" --parent my-app-8aa --json  # → my-app-8ad
+
+# 4. Open OpenCode — omo orchestrates subtasks in parallel via Team Mode
+opencode
+# prompt: "ultrawork — implement dark mode epic my-app-8aa.
+#          Subtasks: 8ab CSS vars, 8ac toggle component, 8ad localStorage.
+#          Each agent claims its subtask, closes it when done."
+
+# omo spins up 3 agents (visual-engineering category), each:
+#   bd update <subtask> --claim → implement → bd close <subtask>
+
+# 5. Orchestrator reviews, closes epic, checkpoints
+bd close my-app-8aa "dark mode complete" --json
+~/.config/opencode/scripts/checkpoint-write.sh my-app-8aa
+```
+
+---
+
+### Jira ticket intake
+
+```bash
+# Paste a Jira URL or key — script finds or creates bead automatically
+BD_ID=$(~/.config/opencode/scripts/jira-to-bd.sh WLB-2046)
+echo $BD_ID   # → my-app-9zx
+
+~/.config/opencode/scripts/score-task.sh $BD_ID
+# → MEDIUM
+
+bd update $BD_ID --claim --json
+opencode
+# prompt: "Work on WLB-2046 ($BD_ID) — <paste ticket description>"
+```
+
+---
+
+### Session recovery after context clear
+
+```bash
+# Before clearing
+~/.config/opencode/scripts/checkpoint-write.sh <current-task-id>
+
+# After /clear or new session
+~/.config/opencode/scripts/session-start.sh
+# Output: last checkpoint keys + ready tasks
+
+# Reload memory in OpenCode
+opencode
+# prompt: "Resume work. session-start output: <paste output>"
+```
+
+---
+
+### Code review via omo
+
+```bash
+# After finishing a feature branch
+opencode
+# prompt: "Review the diff on branch feat/dark-mode.
+#          Use momus agent or hyperplan skill.
+#          Output findings as file:line — issue — fix."
+
+# For deeper audit, use Claude Code:
+claude
+# /code-review high
+```
+
+---
+
+### Scale up: 15+ agents (ultracode fan-out)
+
+```bash
+# omo caps at 3–4 concurrent agents per provider rate limits.
+# For large fan-outs, switch to Claude Code ultracode:
+claude
+# /ultrareview  (or prompt with ultrawork)
+```
+
+---
+
 ## Hooks (Claude Code)
 
 | Event              | Hook                                    |
