@@ -32,9 +32,36 @@ Always: `cp -f`, `mv -f`, `rm -rf`, `apt-get -y`, ssh/scp `-o BatchMode=yes`, `H
 - Session end: `$OMO_SCRIPTS/session-end.sh`
 
 ## Task Protocol by Size
-- SMALL: score → claim → ship → close → checkpoint
-- MEDIUM: bd epic + subtasks; per cycle: claim → delegate to category/team member → close → report via `team_send_message` → orchestrator reviews → PASS: checkpoint + next / FAIL: reopen + reclaim
-- LARGE: PHASE 0 audit-only (commit plan) → PHASE 1 scaffold (non-breaking) → PHASE 2 migrate (1 module = 1 member, test + commit each) → PHASE 3 cleanup (run `hyperplan`). Phase boundary = checkpoint + git commit. Never mix audit and implementation.
+- SMALL: score → claim → ship → **quality gate** → close → checkpoint
+- MEDIUM: bd epic + subtasks; per cycle: claim → delegate to category/team member → **quality gate** → close → report via `team_send_message` → orchestrator reviews → PASS: checkpoint + next / FAIL: reopen + reclaim
+- LARGE: PHASE 0 audit-only (commit plan) → PHASE 1 scaffold (non-breaking) → PHASE 2 migrate (1 module = 1 member, test + commit each) → PHASE 3 cleanup (run `hyperplan` + **adversarial verify**). Phase boundary = checkpoint + git commit. Never mix audit and implementation.
+
+## Quality Gate (Option A — omo momus)
+Run before every `bd close`. Orchestrator delegates to `momus` agent:
+
+```
+"Review the output for task <id>: <brief description of what was done>.
+ Output: PASS or FAIL.
+ If FAIL: list findings as file:line — issue — fix.
+ Be a strict critic. Default FAIL if uncertain."
+```
+
+- **PASS** → `bd close <id>` + `checkpoint-write.sh <id>`
+- **FAIL** → `bd reopen <id>` (if already closed) → fix → re-run quality gate
+- Skip quality gate only for documentation-only tasks
+
+## Adversarial Verify (Option B — Claude Code Workflow)
+For MEDIUM/LARGE tasks or when quality gate fails twice. Run from Claude Code:
+
+```javascript
+// In Claude Code prompt:
+// "Run adversarial-verify workflow for task <id>: <description>"
+// Script: scripts/adversarial-verify.js
+// args: { taskId: '<id>', description: '<full acceptance criteria>', maxRetries: 1 }
+```
+
+3 skeptic agents independently try to refute the implementation. Accepts if ≥2/3 pass.
+On failure, retries once with skeptic findings as context, then auto-reopens task.
 
 ## Commit Message Format
 `<type>: <JIRA-KEY> <description>` — lowercase type (fix|feat|refactor|chore|test|docs), JIRA-KEY right after colon, no parens/brackets. No key → `<type>: <description>`.
