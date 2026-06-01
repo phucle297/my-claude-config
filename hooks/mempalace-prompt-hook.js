@@ -5,17 +5,41 @@ const os = require("os");
 const path = require("path");
 
 function isMempalaceRegistered() {
-  try {
-    const settingsPath = path.join(
-      process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"),
-      "settings.json",
-    );
-    const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-    const servers = settings.mcpServers || {};
-    return Object.keys(servers).some((k) => k.toLowerCase().includes("mempalace"));
-  } catch (e) {
-    return false;
+  const checks = [
+    // Global settings
+    () => {
+      const p = path.join(
+        process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"),
+        "settings.json",
+      );
+      const s = JSON.parse(fs.readFileSync(p, "utf8"));
+      return s.mcpServers || {};
+    },
+    // Project-level .mcp.json (current working directory)
+    () => {
+      const p = path.join(process.cwd(), ".mcp.json");
+      const s = JSON.parse(fs.readFileSync(p, "utf8"));
+      return s.mcpServers || {};
+    },
+    // Project-level .claude/settings.local.json
+    () => {
+      const p = path.join(process.cwd(), ".claude", "settings.local.json");
+      const s = JSON.parse(fs.readFileSync(p, "utf8"));
+      return s.mcpServers || {};
+    },
+  ];
+
+  for (const check of checks) {
+    try {
+      const servers = check();
+      if (Object.keys(servers).some((k) => k.toLowerCase().includes("mempalace"))) {
+        return true;
+      }
+    } catch (e) {
+      // File missing or parse error — skip
+    }
   }
+  return false;
 }
 
 if (!isMempalaceRegistered()) {

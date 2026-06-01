@@ -4,8 +4,15 @@ import { join } from "path"
 import { homedir } from "os"
 
 const HOME = homedir()
-const CLAUDE_SCRIPTS = `${HOME}/.claude/scripts`
-const CLAUDE_HOOKS = `${HOME}/.claude/hooks`
+
+function resolveScriptsDir(): string {
+  if (process.env.OMO_SCRIPTS) return process.env.OMO_SCRIPTS
+  const opencodeScripts = `${HOME}/.config/opencode/scripts`
+  if (existsSync(opencodeScripts)) return opencodeScripts
+  return `${HOME}/.claude/scripts`
+}
+const SCRIPTS_DIR = resolveScriptsDir()
+const CLAUDE_HOOKS = existsSync(`${HOME}/.claude/hooks`) ? `${HOME}/.claude/hooks` : `${HOME}/.config/opencode/hooks`
 
 const AGENT_MAIL_URL = "http://127.0.0.1:8765/api/"
 const AGENT_MAIL_TOKEN = "aabebf4faba1f9f9bedf133a0cb1ff71d1a8d406903a7881951336beb798b8a6"
@@ -27,14 +34,14 @@ export const WorkflowHooks: Plugin = async ({ $, directory }) => {
   return {
     event: async ({ event }) => {
       if (event.type === "session.created") {
-        const script = join(CLAUDE_SCRIPTS, "session-start.sh")
+        const script = join(SCRIPTS_DIR, "session-start.sh")
         if (existsSync(script)) {
           await $`bash ${script}`.cwd(directory).nothrow().quiet()
         }
       }
 
       if (event.type === "session.deleted") {
-        const script = join(CLAUDE_SCRIPTS, "session-end.sh")
+        const script = join(SCRIPTS_DIR, "session-end.sh")
         if (existsSync(script)) {
           await $`bash ${script}`.cwd(directory).nothrow().quiet()
         }
@@ -80,9 +87,9 @@ export const WorkflowHooks: Plugin = async ({ $, directory }) => {
           "Never use TodoWrite or markdown TODO lists.",
           "",
           "## Session Protocol",
-          "On start: run ~/.claude/scripts/session-start.sh (bd prime + reload checkpoint).",
-          "On end: run ~/.claude/scripts/session-end.sh (checkpoint-write + bd prime).",
-          "Checkpoint write: ~/.claude/scripts/checkpoint-write.sh <bd-id>",
+          `On start: run ${SCRIPTS_DIR}/session-start.sh (bd prime + reload checkpoint).`,
+          `On end: run ${SCRIPTS_DIR}/session-end.sh (checkpoint-write + bd prime).`,
+          `Checkpoint write: ${SCRIPTS_DIR}/checkpoint-write.sh <bd-id>`,
         ].join("\n"),
       )
     },

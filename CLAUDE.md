@@ -52,7 +52,7 @@ Script does:
 1. `bd prime` → inject workflow context
 2. `bd kv get checkpoint:current` → get last task id
 3. `bd kv get checkpoint:<id>` → get search keys + queue
-4. `mempalace_search <keys>` → reload relevant context
+4. Claude calls `mempalace_search <keys>` → reload relevant context (script prints keys; Claude makes the MCP call)
 5. `bd ready --json` → show actionable tasks
 
 ## Jira Intake (automated)
@@ -88,7 +88,7 @@ Rules:
 ### SMALL
 
 ```
-score → claim → ship → close → checkpoint-write.sh <id>
+score → claim → ship → quality gate → close → checkpoint-write.sh <id>
 ```
 
 ### MEDIUM
@@ -102,10 +102,9 @@ score → claim → ship → close → checkpoint-write.sh <id>
    - bd update <subtask-id> --claim --json
    - spawn agent via Task tool
    - agent: work
-   - agent: bd close <id> --json
    - agent: bd mail send orchestrator "done:<id>"
-   - orchestrator: bd mail inbox → review bd show <id>
-   - PASS: checkpoint-write.sh <id> → claim next subtask
+   - orchestrator: bd mail inbox → quality gate subagent → review bd show <id>
+   - PASS: bd close <id> + checkpoint-write.sh <id> → claim next subtask
    - FAIL: bd reopen <id> → bd update <id> --claim --json
 ```
 
@@ -155,6 +154,44 @@ Rules:
 - Orchestrator NEVER writes prose into checkpoint
 - Checkpoint = address to reconstruct state, not state itself
 - On reload: `bd kv get checkpoint:<id>` → then `mempalace_search <keys>`
+
+## Quality Gate (Option A — every task)
+
+Run before every `bd close`. Spawn subagent via Task tool with this prompt:
+
+```
+Review task <id> output: <what was done>.
+Evaluate on 5 dimensions — mark each PASS or FAIL:
+1. Correctness: does it match the acceptance criteria?
+2. Security: no new vulnerabilities introduced?
+3. Edge cases: null/empty/boundary inputs handled?
+4. Tests: behaviour verified by tests or manual check?
+5. Completeness: nothing left TODO or half-done?
+
+Output: overall PASS (≥4/5) or FAIL.
+If FAIL: list findings as "file:line — issue — fix".
+Default FAIL if uncertain on any P0/P1 dimension.
+```
+
+- **PASS (≥4/5)** → `bd close <id>` + `checkpoint-write.sh <id>`
+- **FAIL** → fix findings → re-run quality gate (max 2 attempts)
+- **FAIL twice** → escalate to Adversarial Verify (Option B)
+- Skip only for docs-only or config-only tasks
+
+## Adversarial Verify (Option B — Claude Code Workflow)
+
+Use for: MEDIUM/LARGE tasks, quality gate failed twice, security-critical changes.
+
+```
+Prompt: "Run adversarial-verify for task <id>: <full acceptance criteria>"
+Script: scripts/adversarial-verify.js
+```
+
+Flow: implement → self-score (skip to retry if <6/10) → 3 distinct-lens skeptics
+(correctness / security / edge-cases) in parallel → completeness critic → retry once
+with all findings → PASS: close + checkpoint / FAIL: reopen + comment findings.
+
+Accepts if ≥2/3 skeptics pass AND completeness critic says complete.
 
 ## Post-Clear Reload (automated)
 

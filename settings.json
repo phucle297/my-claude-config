@@ -6,13 +6,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"/home/permees/.local/share/fnm/node-versions/v22.22.3/installation/bin/node\" \"/home/permees/.claude/hooks/caveman-activate.js\"",
+            "command": "node \"$HOME/.claude/hooks/caveman-activate.js\"",
             "timeout": 5,
             "statusMessage": "Loading caveman mode..."
           },
           {
             "type": "command",
-            "command": "bash '/home/permees/.claude/hooks/agent_mail_register.sh' 2>/dev/null || true",
+            "command": "bash \"$HOME/.claude/hooks/agent_mail_register.sh\" 2>/dev/null || true",
             "async": true
           }
         ]
@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd '/home/permees/.local/share/mcp_agent_mail' && uv run python -m mcp_agent_mail.cli file_reservations soon \"$PWD\" --minutes 10 2>/dev/null || true"
+            "command": "cd \"$HOME/.local/share/mcp_agent_mail\" && uv run python -m mcp_agent_mail.cli file_reservations soon \"$PWD\" --minutes 10 2>/dev/null || true"
           }
         ]
       }
@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "SLUG=$(printf '%s' \"$PWD\" | tr '/' '-' | tr -cd 'a-zA-Z0-9-'); REG_TOKEN=$(cat \"/tmp/mcp-regtoken-${SLUG}\" 2>/dev/null || echo ''); AGENT_MAIL_PROJECT=\"$PWD\" AGENT_MAIL_AGENT='RedPond' AGENT_MAIL_URL='http://127.0.0.1:8765/api/' AGENT_MAIL_TOKEN='aabebf4faba1f9f9bedf133a0cb1ff71d1a8d406903a7881951336beb798b8a6' AGENT_MAIL_REGISTRATION_TOKEN=\"$REG_TOKEN\" AGENT_MAIL_HOOK_FORMAT='json' AGENT_MAIL_INTERVAL='120' '/home/permees/.claude/hooks/check_inbox.sh' 2>/dev/null || true",
+            "command": "SLUG=$(printf '%s' \"$PWD\" | tr '/' '-' | tr -cd 'a-zA-Z0-9-'); REG_TOKEN=$(cat \"/tmp/mcp-regtoken-${SLUG}\" 2>/dev/null || echo ''); AGENT_MAIL_PROJECT=\"$PWD\" AGENT_MAIL_AGENT='RedPond' AGENT_MAIL_URL='http://127.0.0.1:8765/api/' AGENT_MAIL_TOKEN='aabebf4faba1f9f9bedf133a0cb1ff71d1a8d406903a7881951336beb798b8a6' AGENT_MAIL_REGISTRATION_TOKEN=\"$REG_TOKEN\" AGENT_MAIL_HOOK_FORMAT='json' AGENT_MAIL_INTERVAL='120' \"$HOME/.claude/hooks/check_inbox.sh\" 2>/dev/null || true",
             "async": true
           }
         ]
@@ -68,7 +68,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "bash \"/home/permees/.claude/hooks/caveman-statusline.sh\""
+    "command": "bash \"$HOME/.claude/hooks/caveman-statusline.sh\""
   },
   "enabledPlugins": {
     "beads@beads-marketplace": true,

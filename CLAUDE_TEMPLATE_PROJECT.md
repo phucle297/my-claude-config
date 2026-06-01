@@ -76,4 +76,26 @@ bd close <id>         # Complete work
 - Work is NOT complete until `git commit` succeeds
 - NEVER stop before committing - that leaves work stranded locally
 - NEVER push if branch is develop/dev/master/main/pre-prod/qa/test/staging
+
+## Quality Gate (run before every `bd close`)
+
+Spawn subagent via Task tool:
+
+```
+Review task <id> output: <what was done>.
+Evaluate on 5 dimensions — mark each PASS or FAIL:
+1. Correctness: does it match the acceptance criteria?
+2. Security: no new vulnerabilities introduced?
+3. Edge cases: null/empty/boundary inputs handled?
+4. Tests: behaviour verified by tests or manual check?
+5. Completeness: nothing left TODO or half-done?
+
+Output: overall PASS (≥4/5) or FAIL.
+If FAIL: list findings as "file:line — issue — fix".
+Default FAIL if uncertain on any P0/P1 dimension.
+```
+
+- PASS (≥4/5) → `bd close <id>` + `checkpoint-write.sh <id>`
+- FAIL → fix → re-run (max 2 attempts) → escalate to `scripts/adversarial-verify.js` if still failing
+- Skip only for docs-only or config-only tasks
 <!-- END BEADS INTEGRATION -->

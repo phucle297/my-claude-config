@@ -290,15 +290,16 @@ install_opencode_plugins() {
 }
 
 suggest_shell_rc() {
-  local line='export OMO_SCRIPTS="$HOME/.config/opencode/scripts"'
   echo ""
-  echo "Add to your shell rc file:"
+  echo "Add to your shell rc file (per project, update OPENCODE_PROJECT_SLUG):"
   if [[ -f "$HOME/.config/fish/config.fish" ]]; then
     echo "  # fish (~/.config/fish/config.fish):"
     echo "  set -x OMO_SCRIPTS \"\$HOME/.config/opencode/scripts\""
+    echo "  set -x OPENCODE_PROJECT_SLUG \"<project>\""
   fi
   echo "  # bash/zsh (~/.bashrc or ~/.zshrc):"
-  echo "  $line"
+  echo "  export OMO_SCRIPTS=\"\$HOME/.config/opencode/scripts\""
+  echo "  export OPENCODE_PROJECT_SLUG=\"<project>\""
 }
 
 # ---------------------------------------------------------------------------
@@ -372,7 +373,6 @@ main() {
       echo ""
       install_all_deps
       setup_opencode_dirs
-      ensure_omo
       install_omo_config
       install_opencode_scripts
       install_opencode_plugins

@@ -266,8 +266,6 @@ cp /path/to/claude-config/AGENTS.md .
 # Configure oh-my-openagent.json at ~/.config/opencode/oh-my-openagent.json
 ```
 
-> **Note:** This repo currently lacks `openpackage.yml` validation against the full spec — if `opkg install` fails, fall back to `./install.sh opencode`.
-
 ---
 
 ## Per-project Setup
@@ -302,6 +300,10 @@ cp /path/to/claude-config/AGENTS.md .
 bd init
 touch .beads/PRIME.md
 mempalace --palace ~/.mempalace/<project> init .
+
+# OPENCODE_PROJECT_SLUG is used by opencode.json mempalace MCP config
+# Set it to your project name — add to shell rc alongside OMO_SCRIPTS
+export OPENCODE_PROJECT_SLUG="<project>"
 
 # Set OMO_SCRIPTS so AGENTS.md scripts resolve — add to shell rc
 export OMO_SCRIPTS="$HOME/.config/opencode/scripts"
