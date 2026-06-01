@@ -239,7 +239,7 @@ install_claude_plugins() {
 # ---------------------------------------------------------------------------
 
 setup_opencode_dirs() {
-  mkdir -p "$OPENCODE_DIR/scripts"
+  mkdir -p "$OPENCODE_DIR/scripts" "$OPENCODE_DIR/plugins"
   info "OpenCode dirs ready"
 }
 
@@ -271,6 +271,22 @@ install_opencode_scripts() {
       info "Installed $dst"
     fi
   done
+}
+
+install_opencode_plugins() {
+  for f in "$SCRIPT_DIR/.opencode/plugins/"*; do
+    [ -f "$f" ] || continue
+    local dst="$OPENCODE_DIR/plugins/$(basename "$f")"
+    install_file "$f" "$dst"
+  done
+  # Ensure @opencode-ai/plugin dep is installed
+  if [ ! -f "$OPENCODE_DIR/package.json" ]; then
+    printf '{\n  "dependencies": {\n    "@opencode-ai/plugin": "latest"\n  }\n}\n' > "$OPENCODE_DIR/package.json"
+    info "Created $OPENCODE_DIR/package.json"
+  fi
+  if has npm; then
+    (cd "$OPENCODE_DIR" && npm install --silent 2>/dev/null) && info "opencode plugin deps installed"
+  fi
 }
 
 suggest_shell_rc() {
@@ -359,6 +375,7 @@ main() {
       ensure_omo
       install_omo_config
       install_opencode_scripts
+      install_opencode_plugins
       print_opencode_next_steps
       ;;
     all)
@@ -379,6 +396,7 @@ main() {
       setup_opencode_dirs
       install_omo_config
       install_opencode_scripts
+      install_opencode_plugins
       print_opencode_next_steps
       ;;
     *)

@@ -16,8 +16,8 @@ mcp:
     command: [mempalace-mcp, --palace, "{env:HOME}/.mempalace/{env:OPENCODE_PROJECT_SLUG}"]
     platforms: [claude, opencode]
   agent-mail:
-    type: local
-    command: [uv, run, python, -m, mcp_agent_mail.server]
+    type: remote
+    url: "http://127.0.0.1:8765/api/"
     platforms: [claude, opencode]
 
 platforms:
