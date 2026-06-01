@@ -254,49 +254,17 @@ Config files are never overwritten (skips existing — no destructive writes). S
 
 ---
 
-## Migration with OpenPackage
+## Migrating from Claude Code to OpenCode
 
-[enulus/OpenPackage](https://github.com/enulus/OpenPackage) converts Claude Code configs to OpenCode format automatically.
+Coming from Claude Code? See **[MIGRATE_TO_OPENCODE.md](./MIGRATE_TO_OPENCODE.md)** for a step-by-step guide using [OpenPackage](https://github.com/enulus/OpenPackage).
 
-```bash
-npm install -g opkg   # or: npx opkg
-```
-
-### What OpenPackage handles automatically
-
-| File / Config | Auto-converted? |
-|---|---|
-| `agents/*.md` → `.opencode/agent/*.md` | ✅ Yes — tool arrays, model names, permissions |
-| `mcp` config → platform-specific format | ✅ Yes |
-| `CLAUDE.md` → `AGENTS.md` | ❌ No — maintain manually |
-| `opencode.json` (provider, plugin) | ❌ No — maintain manually |
-| `oh-my-openagent.json` (omo config) | ❌ No — omo-specific, maintain manually |
-
-### Do you still need separate OpenCode config?
-
-**Short answer: partially.**
-
-| Config | Still needed? | Reason |
-|---|---|---|
-| `opencode.json` | ✅ Yes | Provider registration + MCP — OpenPackage doesn't generate this |
-| `AGENTS.md` | ✅ Yes | Orchestrator rules — no CLAUDE.md → AGENTS.md auto-conversion |
-| `oh-my-openagent.json` | ✅ Yes | omo agent behavior, team mode, concurrency — omo-specific |
-| `.opencode/agent/*.md` | ⚠️ Generated | OpenPackage generates from `agents/` — edit source in `agents/`, not here |
-
-### Install from this repo via OpenPackage
+Quick start:
 
 ```bash
-# In your project directory
-opkg install gh@phucle297/my-claude-config --platforms opencode
-
-# This converts agents/*.md → .opencode/agent/ and wires MCP config.
-# Then manually copy the configs OpenPackage doesn't handle:
-cp /path/to/claude-config/opencode.json .
-cp /path/to/claude-config/AGENTS.md .
-# Configure oh-my-openagent.json at ~/.config/opencode/oh-my-openagent.json
+npm i -g opkg
+opkg add .claude/
+opkg install --platforms opencode
 ```
-
-> **Note:** `openpackage.yml` does not declare `scripts/` or `hooks/`. These are not copied by `opkg install`. Run `./install.sh opencode` first (or manually copy `scripts/` to `~/.config/opencode/scripts/`) before using per-project scripts.
 
 ---
 
