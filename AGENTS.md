@@ -36,32 +36,41 @@ Always: `cp -f`, `mv -f`, `rm -rf`, `apt-get -y`, ssh/scp `-o BatchMode=yes`, `H
 - MEDIUM: bd epic + subtasks; per cycle: claim → delegate to category/team member → **quality gate** → close → report via `team_send_message` → orchestrator reviews → PASS: checkpoint + next / FAIL: reopen + reclaim
 - LARGE: PHASE 0 audit-only (commit plan) → PHASE 1 scaffold (non-breaking) → PHASE 2 migrate (1 module = 1 member, test + commit each) → PHASE 3 cleanup (run `hyperplan` + **adversarial verify**). Phase boundary = checkpoint + git commit. Never mix audit and implementation.
 
-## Quality Gate (Option A — omo momus)
-Run before every `bd close`. Orchestrator delegates to `momus` agent:
+## Quality Gate (Option A — omo, every task)
+Run before every `bd close`. Delegate to `momus` agent with this exact prompt:
 
 ```
-"Review the output for task <id>: <brief description of what was done>.
- Output: PASS or FAIL.
- If FAIL: list findings as file:line — issue — fix.
- Be a strict critic. Default FAIL if uncertain."
+Review task <id> output: <what was done>.
+Evaluate on 5 dimensions — mark each PASS or FAIL:
+1. Correctness: does it match the acceptance criteria?
+2. Security: no new vulnerabilities introduced?
+3. Edge cases: null/empty/boundary inputs handled?
+4. Tests: behaviour verified by tests or manual check?
+5. Completeness: nothing left TODO or half-done?
+
+Output: overall PASS (≥4/5) or FAIL.
+If FAIL: list findings as "file:line — issue — fix".
+Default FAIL if uncertain on any P0/P1 dimension.
 ```
 
-- **PASS** → `bd close <id>` + `checkpoint-write.sh <id>`
-- **FAIL** → `bd reopen <id>` (if already closed) → fix → re-run quality gate
-- Skip quality gate only for documentation-only tasks
+- **PASS (≥4/5)** → `bd close <id>` + `checkpoint-write.sh <id>`
+- **FAIL** → fix findings → re-run quality gate (max 2 attempts)
+- **FAIL twice** → escalate to Option B (adversarial-verify)
+- Skip only for docs-only or config-only tasks
 
 ## Adversarial Verify (Option B — Claude Code Workflow)
-For MEDIUM/LARGE tasks or when quality gate fails twice. Run from Claude Code:
+Use for: MEDIUM/LARGE tasks, quality gate failed twice, security-critical changes.
 
-```javascript
-// In Claude Code prompt:
-// "Run adversarial-verify workflow for task <id>: <description>"
-// Script: scripts/adversarial-verify.js
-// args: { taskId: '<id>', description: '<full acceptance criteria>', maxRetries: 1 }
+```
+Prompt: "Run adversarial-verify for task <id>: <full acceptance criteria>"
+Script: scripts/adversarial-verify.js
 ```
 
-3 skeptic agents independently try to refute the implementation. Accepts if ≥2/3 pass.
-On failure, retries once with skeptic findings as context, then auto-reopens task.
+Flow: implement → self-score (skip to retry if <6/10) → 3 distinct-lens skeptics
+(correctness / security / edge-cases) in parallel → completeness critic → retry once
+with all findings → PASS: close + checkpoint / FAIL: reopen + comment findings.
+
+Accepts if ≥2/3 skeptics pass AND completeness critic says complete.
 
 ## Commit Message Format
 `<type>: <JIRA-KEY> <description>` — lowercase type (fix|feat|refactor|chore|test|docs), JIRA-KEY right after colon, no parens/brackets. No key → `<type>: <description>`.

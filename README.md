@@ -206,14 +206,22 @@ cd claude-config
 ./install.sh opencode
 ```
 
-Installer:
+Installer auto-installs all dependencies then copies config files:
 
-1. Checks prerequisites
-2. Creates config dirs
-3. Copies all config files (skips existing — no overwrites)
-4. Makes scripts executable
-5. For Claude Code: installs `caveman`, `beads`, `atlassian` plugins
-6. For OpenCode: installs omo, writes `oh-my-openagent.json` and `tui.json` to `~/.config/opencode/`
+| Tool | Auto-installed? |
+|---|---|
+| jq | ✅ apt / brew |
+| Node.js + npx | ✅ via fnm |
+| uv (Python) | ✅ curl install |
+| dolt | ✅ curl install |
+| beads (`bd`) | ✅ curl install |
+| bv + mcp_agent_mail | ✅ curl install |
+| opencode | ✅ curl install |
+| omo | ✅ npx/bunx install |
+| mempalace | ⚠️ manual — no standard curl install yet |
+| claude CLI | ⚠️ manual — https://claude.ai/download |
+
+After deps, copies config files (skips existing — no overwrites), makes scripts executable, installs Claude plugins.
 
 ---
 
@@ -317,12 +325,13 @@ New task
   └─ score-task.sh <id>            → SMALL / MEDIUM / LARGE
   └─ bd update <id> --claim
   └─ work
-  └─ Quality Gate (momus review)   → PASS / FAIL
+  └─ Quality Gate (momus, Option A)  → 5-dimension review → PASS≥4/5 or FAIL
        PASS → bd close <id> → checkpoint-write.sh <id>
-       FAIL → fix → re-run quality gate
-  └─ Adversarial Verify (MEDIUM+)  → scripts/adversarial-verify.js
-       3 skeptics vote → accept if ≥2/3 pass → close + checkpoint
-       fail → retry once with findings → reopen if still failing
+       FAIL → fix → retry (max 2x) → escalate to Option B if still failing
+  └─ Adversarial Verify (Option B, MEDIUM+)  → scripts/adversarial-verify.js
+       self-score (<6 → skip to retry) → 3 lenses: correctness/security/edge-cases
+       + completeness critic → accept if ≥2/3 pass + complete
+       fail → retry once → reopen task if still failing
 
 Session end
   └─ session-end.sh → checkpoint-write + bd prime
