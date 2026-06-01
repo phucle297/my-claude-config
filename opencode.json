@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["oh-my-openagent"],
+  "mcp": {
+    "mempalace": {
+      "type": "local",
+      "command": ["mempalace-mcp", "--palace", "{env:HOME}/.mempalace/{env:OPENCODE_PROJECT_SLUG}"],
+      "enabled": true
+    },
+    "agent-mail": {
+      "type": "local",
+      "command": ["uv", "run", "python", "-m", "mcp_agent_mail.server"],
+      "enabled": true
+    }
+  }
+}

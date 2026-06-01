@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
+OPENCODE_DIR="$HOME/.config/opencode"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -13,7 +14,13 @@ info() { echo -e "${GREEN}[ok]${NC} $1"; }
 warn() { echo -e "${YELLOW}[warn]${NC} $1"; }
 error() { echo -e "${RED}[error]${NC} $1" >&2; }
 
-check_deps() {
+MODE="${1:-all}"  # all | claude | opencode
+
+# ---------------------------------------------------------------------------
+# Claude Code
+# ---------------------------------------------------------------------------
+
+check_claude_deps() {
   local missing=()
   for cmd in claude jq bd bv mempalace; do
     command -v "$cmd" &>/dev/null || missing+=("$cmd")
@@ -32,11 +39,11 @@ check_deps() {
   fi
 }
 
-setup_dirs() {
+setup_claude_dirs() {
   mkdir -p "$CLAUDE_DIR/scripts"
   mkdir -p "$CLAUDE_DIR/agents"
   mkdir -p "$CLAUDE_DIR/memory"
-  info "Directories ready"
+  info "Claude dirs ready"
 }
 
 install_file() {
@@ -45,7 +52,7 @@ install_file() {
   if [ -f "$dst" ]; then
     warn "Skipping $dst (exists). Backup first or remove manually."
   else
-    cp "$src" "$dst"
+    cp -f "$src" "$dst"
     info "Installed $dst"
   fi
 }
@@ -68,7 +75,7 @@ install_settings() {
   if [ -f "$CLAUDE_DIR/settings.json" ]; then
     warn "settings.json exists — skipping. Merge manually if needed."
   else
-    cp "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
+    cp -f "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
     info "Installed $CLAUDE_DIR/settings.json"
   fi
 }
@@ -78,7 +85,7 @@ install_claude_md() {
   install_file "$SCRIPT_DIR/CLAUDE_TEMPLATE_PROJECT.md" "$CLAUDE_DIR/CLAUDE_TEMPLATE_PROJECT.md"
 }
 
-install_plugins() {
+install_claude_plugins() {
   echo ""
   echo "Installing Claude plugins..."
   claude plugin install caveman@caveman || warn "caveman install failed — run manually: claude plugin install caveman@caveman"
@@ -87,9 +94,119 @@ install_plugins() {
   info "Plugins installed"
 }
 
-print_next_steps() {
+# ---------------------------------------------------------------------------
+# OpenCode + omo
+# ---------------------------------------------------------------------------
+
+check_opencode_deps() {
+  local missing=()
+  for cmd in opencode npx jq bd mempalace; do
+    command -v "$cmd" &>/dev/null || missing+=("$cmd")
+  done
+  if [ ${#missing[@]} -gt 0 ]; then
+    error "Missing required tools: ${missing[*]}"
+    echo ""
+    echo "Install guide:"
+    echo "  opencode  → curl -fsSL https://opencode.ai/install | bash"
+    echo "  npx       → install Node.js from https://nodejs.org"
+    echo "  bd        → see Claude Code prerequisites above"
+    echo "  mempalace → https://github.com/mempalace/mempalace"
+    exit 1
+  fi
+}
+
+install_omo() {
   echo ""
-  echo "=== Done ==="
+  echo "Installing oh-my-openagent..."
+  npx oh-my-openagent install \
+    --no-tui \
+    --platform=opencode \
+    --claude=no \
+    --openai=no \
+    --gemini=no \
+    --copilot=no \
+    --skip-auth \
+    || warn "omo install failed — run manually: npx oh-my-openagent install"
+  info "omo installed"
+}
+
+setup_opencode_dirs() {
+  mkdir -p "$OPENCODE_DIR/scripts"
+  info "OpenCode dirs ready"
+}
+
+install_omo_config() {
+  local src="$SCRIPT_DIR/.opencode/oh-my-openagent.json"
+  local dst="$OPENCODE_DIR/oh-my-openagent.json"
+  if [ -f "$src" ]; then
+    if [ -f "$dst" ]; then
+      warn "oh-my-openagent.json exists — skipping. Merge manually if needed."
+    else
+      cp -f "$src" "$dst"
+      info "Installed $dst"
+    fi
+  else
+    warn "No .opencode/oh-my-openagent.json in repo — skipping."
+  fi
+
+  # tui.json — needed for omo TUI sidebar
+  local tui_dst="$OPENCODE_DIR/tui.json"
+  if [ ! -f "$tui_dst" ]; then
+    printf '{\n  "plugin": ["oh-my-openagent/tui"]\n}\n' > "$tui_dst"
+    info "Installed $tui_dst"
+  else
+    warn "tui.json exists — skipping."
+  fi
+}
+
+install_opencode_scripts() {
+  for f in "$SCRIPT_DIR/scripts/"*.sh; do
+    local dst="$OPENCODE_DIR/scripts/$(basename "$f")"
+    if [ -f "$dst" ]; then
+      warn "Skipping $dst (exists)."
+    else
+      cp -f "$f" "$dst"
+      chmod +x "$dst"
+      info "Installed $dst"
+    fi
+  done
+}
+
+print_opencode_next_steps() {
+  echo ""
+  echo "=== OpenCode setup done ==="
+  echo ""
+  echo "Per-project setup (run once per repo):"
+  echo ""
+  echo "  cd ~/Projects/<org>/<project>"
+  echo ""
+  echo "  # The opencode.json and AGENTS.md in this repo are project-scoped."
+  echo "  # Copy them if you want to use the same config in another project:"
+  echo "  cp ~/.config/opencode/opencode.json opencode.json   # optional"
+  echo "  cp ~/.config/opencode/AGENTS.md AGENTS.md            # optional"
+  echo ""
+  echo "  # Init beads and mempalace (same as Claude Code)"
+  echo "  bd init"
+  echo "  mempalace --palace ~/.mempalace/<project> init ."
+  echo ""
+  echo "  # Set OMO_SCRIPTS so AGENTS.md scripts resolve"
+  echo "  export OMO_SCRIPTS=\"\$HOME/.config/opencode/scripts\""
+  echo "  # Add to shell rc so it persists"
+  echo ""
+  echo "Verify:"
+  echo "  opencode models                  # configured provider/model listed"
+  echo "  opencode                         # /model → your chosen model"
+  echo "  bd status                        # beads working"
+  echo "  npx oh-my-openagent doctor       # no blocking errors"
+}
+
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
+
+print_claude_next_steps() {
+  echo ""
+  echo "=== Claude Code setup done ==="
   echo ""
   echo "Per-project setup (run once per repo):"
   echo ""
@@ -108,17 +225,56 @@ print_next_steps() {
 }
 
 main() {
-  echo "=== Claude Config Installer ==="
-  echo ""
+  case "$MODE" in
+    claude)
+      echo "=== Claude Code Config Installer ==="
+      echo ""
+      check_claude_deps
+      setup_claude_dirs
+      install_claude_md
+      install_scripts
+      install_agents
+      install_settings
+      install_claude_plugins
+      print_claude_next_steps
+      ;;
+    opencode)
+      echo "=== OpenCode + omo Config Installer ==="
+      echo ""
+      check_opencode_deps
+      setup_opencode_dirs
+      install_omo
+      install_omo_config
+      install_opencode_scripts
+      print_opencode_next_steps
+      ;;
+    all)
+      echo "=== Full Config Installer (Claude Code + OpenCode) ==="
+      echo ""
+      check_claude_deps
+      setup_claude_dirs
+      install_claude_md
+      install_scripts
+      install_agents
+      install_settings
+      install_claude_plugins
+      print_claude_next_steps
 
-  check_deps
-  setup_dirs
-  install_claude_md
-  install_scripts
-  install_agents
-  install_settings
-  install_plugins
-  print_next_steps
+      echo ""
+      echo "---"
+      check_opencode_deps
+      setup_opencode_dirs
+      install_omo
+      install_omo_config
+      install_opencode_scripts
+      print_opencode_next_steps
+      ;;
+    *)
+      error "Unknown mode: $MODE"
+      echo "Usage: ./install.sh [all|claude|opencode]"
+      exit 1
+      ;;
+  esac
 }
 
-main "$@"
+main
