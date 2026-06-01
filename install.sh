@@ -222,7 +222,6 @@ install_claude_plugins() {
   step "Installing Claude plugins..."
   claude plugin install caveman@caveman         || warn "caveman install failed"
   claude plugin install beads@beads-marketplace || warn "beads install failed"
-  claude plugin install atlassian@claude-plugins-official || warn "atlassian install failed"
   info "Claude plugins installed"
 }
 

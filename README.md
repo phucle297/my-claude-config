@@ -29,7 +29,6 @@ The main goal is to solve common problems when working with AI coding agents at 
 | MCP servers             | Extend agents with external tools and memory               |
 | bv                      | Code coupling & architecture analysis                      |
 | caveman plugin          | Compressed AI communication mode (Claude Code only)        |
-| Atlassian plugin        | Jira & Confluence integration (Claude Code only)           |
 | Hooks system            | Automates session lifecycle and safety checks              |
 
 ---
@@ -489,12 +488,9 @@ omo has no 1:1 hook events yet. Use these workarounds:
 | ----------- | ---------------------------------------------------------- |
 | `caveman`   | `JuliusBrussee/caveman` — compressed AI communication     |
 | `beads`     | `gastownhall/beads` — task management                      |
-| `atlassian` | `claude-plugins-official` — Jira/Confluence integration    |
-
 ```bash
 claude plugin install caveman@caveman
 claude plugin install beads@beads-marketplace
-claude plugin install atlassian@claude-plugins-official
 ```
 
 ---
