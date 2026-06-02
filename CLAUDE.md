@@ -18,7 +18,6 @@ Exception: **SMALL** tasks (F ≤ 3 files, low coupling) — implement directly,
 
 ## Token Rules
 
-- Caveman mode for all prose responses
 - Memory loads on demand — never pre-load everything
 
 ## Non-Interactive Shell Commands
