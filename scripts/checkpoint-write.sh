@@ -11,6 +11,7 @@ bd kv set checkpoint:$ID "$PAYLOAD"
 bd kv set checkpoint:current $ID
 
 # Update PRIME.md to auto-inject into every session even after compact
+mkdir -p .beads
 echo "## Last Checkpoint
 search: $KEYS
 queue: $QUEUE
