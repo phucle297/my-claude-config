@@ -56,6 +56,17 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/scripts/verify-edit.sh\"",
+            "timeout": 120,
+            "async": true
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
