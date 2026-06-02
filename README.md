@@ -512,14 +512,28 @@ claude
 
 ## Hooks (Claude Code)
 
-| Event              | Hook                                    |
-| ------------------ | --------------------------------------- |
-| `SessionStart`     | `caveman-activate.js` — caveman mode badge |
-| `SessionStart`     | `agent_mail_register.sh` — register agent with agent-mail |
-| `UserPromptSubmit` | `mempalace-prompt-hook.js` — inject memory context |
-| `PreToolUse: Edit` | `file_reservations` — reserve file via agent-mail |
-| `PostToolUse: Bash`| `check_inbox.sh` — poll agent-mail inbox |
-| `Stop`             | `session-end.sh` — checkpoint + bd prime |
+Wired in `settings.json`. Order within a single event matters — earlier hooks run
+first.
+
+| Event                            | Hook command                                              | Purpose                                          |
+| -------------------------------- | --------------------------------------------------------- | ------------------------------------------------ |
+| `SessionStart`                   | `hooks/caveman-activate.js`                               | Caveman mode badge + system prompt activation    |
+| `SessionStart`                   | `scripts/session-start.sh`                                | Reload last bd checkpoint + ready tasks (async)  |
+| `SessionStart`                   | `hooks/agent_mail_register.sh`                            | Register agent identity with agent-mail (async)  |
+| `UserPromptSubmit`               | `hooks/mempalace-prompt-hook.js`                          | Inject relevant mempalace memory                 |
+| `PreToolUse: Edit\|Write\|MultiEdit` | `scripts/guard-claim.sh`                              | Block edits when no bd task is claimed           |
+| `PreToolUse: Edit`               | `mcp_agent_mail … file_reservations soon`                 | Warn on stale file reservations (async, 5 s)     |
+| `PostToolUse: Edit\|Write\|MultiEdit` | `scripts/verify-edit.sh`                             | Post-edit verification / typecheck (async)       |
+| `PostToolUse: Bash`              | `hooks/check_inbox.sh`                                    | Poll agent-mail inbox (async, 120 s rate limit)  |
+| `Stop`                           | `scripts/session-end.sh` (nohup)                          | Checkpoint write + bd prime in background        |
+
+> **Provider routing:** `settings.json` sets `ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic`
+> and `ANTHROPIC_MODEL=MiniMax-M3` (plus matching `ANTHROPIC_DEFAULT_*_MODEL` and
+> `CLAUDE_CODE_SUBAGENT_MODEL`). The top-level `"model": "opusplan"` field is
+> overridden by these env vars, so **the CLI talks to the MiniMax / minimax
+> endpoint, not real Anthropic Claude**. If you clone this repo and want real
+> Claude, delete the four `ANTHROPIC_*` env entries and remove
+> `ANTHROPIC_AUTH_TOKEN` before launching `claude`.
 
 ## Hooks (OpenCode — via workflow-hooks.ts plugin)
 
@@ -544,14 +558,26 @@ Remaining gaps (not yet automated in OpenCode):
 
 ## Plugins (Claude Code)
 
-| Plugin      | Source                                                     |
-| ----------- | ---------------------------------------------------------- |
-| `caveman`   | `JuliusBrussee/caveman` — compressed AI communication     |
-| `beads`     | `gastownhall/beads` — task management                      |
+| Plugin            | Marketplace                  | Purpose                                  |
+| ----------------- | ---------------------------- | ---------------------------------------- |
+| `caveman`         | `JuliusBrussee/caveman`      | Compressed AI communication mode         |
+| `beads`           | `gastownhall/beads`          | Task management + checkpoint workflow    |
+| `superpowers`     | `claude-plugins-official`    | Skill bundle (brainstorming, TDD, etc.)  |
+| `context7`        | `claude-plugins-official`    | Live library / framework documentation   |
+| `code-simplifier` | `claude-plugins-official`    | Diff-based simplification helper         |
+| `skill-creator`   | `claude-plugins-official`    | Author and benchmark Claude Code skills  |
+
 ```bash
 claude plugin install caveman@caveman
 claude plugin install beads@beads-marketplace
+claude plugin install superpowers@claude-plugins-official
+claude plugin install context7@claude-plugins-official
+claude plugin install code-simplifier@claude-plugins-official
+claude plugin install skill-creator@claude-plugins-official
 ```
+
+> `./install.sh claude` installs all of the above and keeps them in sync with
+> `enabledPlugins` in `settings.json`.
 
 ---
 
