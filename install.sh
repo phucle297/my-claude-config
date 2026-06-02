@@ -204,6 +204,23 @@ install_agents() {
   done
 }
 
+install_skills() {
+  [ -d "$SCRIPT_DIR/skills" ] || return 0
+  mkdir -p "$CLAUDE_DIR/skills"
+  for d in "$SCRIPT_DIR/skills/"*/; do
+    [ -d "$d" ] || continue
+    local name dst
+    name="$(basename "$d")"
+    dst="$CLAUDE_DIR/skills/$name"
+    if [ -d "$dst" ]; then
+      warn "Skipping skill $name (exists). Backup first or remove manually."
+    else
+      cp -rf "$d" "$dst"
+      info "Installed skill $name"
+    fi
+  done
+}
+
 install_hooks() {
   for f in "$SCRIPT_DIR/hooks/"*.sh "$SCRIPT_DIR/hooks/"*.js; do
     [ -f "$f" ] || continue
@@ -478,6 +495,7 @@ install_platform() {
       install_claude_md
       install_claude_scripts
       install_agents
+      install_skills
       install_hooks
       install_settings
       install_claude_plugins

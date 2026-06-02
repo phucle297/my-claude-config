@@ -9,6 +9,20 @@ agents:
     platforms: [claude, opencode]
   - path: agents/reviewer.md
     platforms: [claude, opencode]
+  - path: agents/security-reviewer.md
+    platforms: [claude, opencode]
+  - path: agents/test-writer.md
+    platforms: [claude, opencode]
+  - path: agents/debugger.md
+    platforms: [claude, opencode]
+  - path: agents/planner.md
+    platforms: [claude, opencode]
+  - path: agents/quality-gate.md
+    platforms: [claude, opencode]
+
+skills:
+  - path: skills/report-generator/SKILL.md
+    platforms: [claude]
 
 mcp:
   mempalace:
