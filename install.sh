@@ -320,6 +320,19 @@ install_opencode_plugins() {
   fi
 }
 
+# Generate .opencode/agent/*.md from canonical agents/*.md. Single source
+# of truth lives in agents/; this dir is gitignored and refreshed on every
+# `./install.sh opencode` so omo sees the same content as Claude Code.
+install_opencode_agents() {
+  local dst_dir="$SCRIPT_DIR/.opencode/agent"
+  mkdir -p "$dst_dir"
+  for f in "$SCRIPT_DIR/agents/"*.md; do
+    [ -f "$f" ] || continue
+    cp -f "$f" "$dst_dir/$(basename "$f")"
+  done
+  info "Synced $(ls "$dst_dir"/*.md 2>/dev/null | wc -l) agent file(s) to $dst_dir"
+}
+
 OMO_RC_MARKER_BEGIN="# >>> oh-my-openagent slug >>>"
 OMO_RC_MARKER_END="# <<< oh-my-openagent slug <<<"
 
@@ -509,6 +522,7 @@ install_platform() {
       install_omo_config
       install_opencode_scripts
       install_opencode_plugins
+      install_opencode_agents
       print_opencode_next_steps
       ;;
     cursor)
