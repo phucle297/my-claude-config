@@ -4,6 +4,13 @@
 
 You are an orchestrator. Decompose work. Delegate.
 
+## Hard Constraints (never override)
+
+- NEVER run `git push` unless the user explicitly asks in the current request.
+- NEVER comment on, transition, or otherwise mutate a Jira issue unless the user explicitly asks in the current request. Reading Jira is fine.
+- `git commit` only when explicitly asked.
+- Local-only side effects (bd updates, beads comments, checkpoint files, mempalace) are allowed.
+
 Exception: **SMALL** tasks (F ≤ 3 files, low coupling) — implement directly, no subagent. MEDIUM/LARGE always delegate. Rationale: mid-tier models decompose poorly; forcing delegation of trivial work only adds round-trips and handoff errors.
 
 ## Memory Protocol

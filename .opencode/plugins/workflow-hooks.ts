@@ -16,7 +16,6 @@ const CLAUDE_HOOKS = existsSync(`${HOME}/.claude/hooks`) ? `${HOME}/.claude/hook
 
 const AGENT_MAIL_URL = "http://127.0.0.1:8765/api/"
 const AGENT_MAIL_TOKEN = "aabebf4faba1f9f9bedf133a0cb1ff71d1a8d406903a7881951336beb798b8a6"
-const AGENT_MAIL_AGENT = "RedPond"
 const AGENT_MAIL_INTERVAL_MS = 120_000
 
 const lastInboxCheck: Record<string, number> = {}
@@ -65,10 +64,13 @@ export const WorkflowHooks: Plugin = async ({ $, directory }) => {
         const slug = directory.replace(/\//g, "-").replace(/[^a-zA-Z0-9-]/g, "")
         const regToken = readTokenFile(slug)
 
+        const agentName = process.env.AGENT_MAIL_AGENT
+          || `cc-${directory.replace(/[^a-zA-Z0-9]/g, "").slice(-12)}`
+
         await $`bash ${inboxScript}`
           .env({
             AGENT_MAIL_PROJECT: directory,
-            AGENT_MAIL_AGENT,
+            AGENT_MAIL_AGENT: agentName,
             AGENT_MAIL_URL,
             AGENT_MAIL_TOKEN,
             AGENT_MAIL_REGISTRATION_TOKEN: regToken,

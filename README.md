@@ -154,6 +154,41 @@ sudo apt install jq   # or brew install jq
 
 ---
 
+### Jira (Atlassian) — manual, platform-specific
+
+The Atlassian integration is **intentionally NOT auto-installed** because the
+install differs between Claude Code and OpenCode, and the marketplace
+identifier is still in flux. Set it up manually before relying on the
+Jira-driven flow described in `CLAUDE.md` / `AGENTS.md`.
+
+**Claude Code** — install the official plugin:
+
+```bash
+claude plugin install atlassian@claude-plugins-official
+```
+
+**OpenCode** — Atlassian is configured as an **MCP server**, not a Claude
+plugin. Add the `atlassian` MCP server to your `opencode.json` (or via
+`opencode mcp`):
+
+```json
+{
+  "mcp": {
+    "atlassian": {
+      "type": "remote",
+      "url": "https://mcp.atlassian.com/v1",
+      "oauth": {}
+    }
+  }
+}
+```
+
+After either setup, restart your AI tool so it picks up the new plugin / MCP
+server. The Jira intake flow (`jira-to-bd.sh` → `score-task.sh` → claim) only
+works once this is wired up.
+
+---
+
 ### Claude Code
 
 ```bash

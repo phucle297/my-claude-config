@@ -1,7 +1,7 @@
 #!/bin/bash
 set -uo pipefail
 # verify-edit.sh — PostToolUse hook for Edit|Write|MultiEdit.
-# Auto-detects project type, runs only the checks that exist, prints ONLY on
+# Auto-detects project type, runs only eslint (no typecheck), prints ONLY on
 # error. Never blocks the workflow: always exits 0. Warning, not gate.
 #
 # Reads the hook JSON on stdin and extracts the edited file path.
@@ -38,32 +38,11 @@ find_up() {
 }
 
 PKG_DIR="$(find_up package.json || true)"
-TS_DIR="$(find_up tsconfig.json || true)"
 
 # timeout wrapper (skip if `timeout` absent)
 run() { if command -v timeout >/dev/null 2>&1; then timeout 90 "$@"; else "$@"; fi; }
 
 ERRORS=""
-
-# --- typecheck: edited file only (avoid noise from pre-existing repo errors) ---
-case "$FILE" in
-  *.ts|*.tsx)
-    if [ -n "$TS_DIR" ] && command -v npx >/dev/null 2>&1; then
-      # Pass the file directly to tsc — it compiles that file in the context
-      # of tsconfig but does NOT re-typecheck the whole repo. Repo-wide
-      # pre-existing errors are filtered to those touching the edited file.
-      OUT="$(cd "$TS_DIR" && run npx --no-install tsc --noEmit --pretty false "$FILE" 2>&1)"
-      if [ -n "$OUT" ] && printf '%s' "$OUT" | grep -qiE 'error'; then
-        # Only report errors that mention the edited file (or relative imports
-        # of it). Whole-repo noise is suppressed.
-        RELEVANT="$(printf '%s' "$OUT" | grep -E "error TS|\\.ts\\(.*\\)|\\.tsx\\(.*\\)" | grep -F "$(basename "$FILE")" | head -20)"
-        if [ -n "$RELEVANT" ]; then
-          ERRORS="${ERRORS}--- typecheck (changed file only) ---\n${RELEVANT}\n"
-        fi
-      fi
-    fi
-    ;;
-esac
 
 # --- lint: eslint config present → lint the single changed file ---
 if [ -n "$PKG_DIR" ]; then

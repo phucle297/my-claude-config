@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Called at SessionStart — registers RedPond via macro_start_session for $PWD.
+# Called at SessionStart — registers agent (default = cc-<last12-alnum-of-PWD>)
+# via macro_start_session for $PWD. Override with $AGENT_MAIL_AGENT.
 # Saves/loads registration_token from persistent store.
 set -uo pipefail
 
 PROJECT="$PWD"
-AGENT="RedPond"
+AGENT="${AGENT_MAIL_AGENT:-cc-$(printf '%s' "$PROJECT" | tr -cd 'a-zA-Z0-9' | tail -c 12)}"
 URL="${AGENT_MAIL_URL:-http://127.0.0.1:8765/api/}"
 BEARER="${AGENT_MAIL_TOKEN:-aabebf4faba1f9f9bedf133a0cb1ff71d1a8d406903a7881951336beb798b8a6}"
 MODEL="${AGENT_MAIL_MODEL:-claude-sonnet-4-6}"

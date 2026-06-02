@@ -89,22 +89,26 @@ hard-coding hex values. The neutrals and semantic colors are what make it read a
 :root {
   /* Brand */
   --primary: #fcba03;
-  --primary-strong: #e0a500;   /* hover / pressed */
-  --primary-soft: #fff6db;     /* tinted backgrounds, KPI accents */
-  --on-primary: #1f2937;       /* text ON amber — NEVER white, amber+white fails contrast */
+  --primary-strong: #e0a500; /* hover / pressed */
+  --primary-soft: #fff6db; /* tinted backgrounds, KPI accents */
+  --on-primary: #1f2937; /* text ON amber — NEVER white, amber+white fails contrast */
 
   /* Neutrals */
-  --bg: #f8fafc;               /* page background */
-  --surface: #ffffff;          /* cards */
+  --bg: #f8fafc; /* page background */
+  --surface: #ffffff; /* cards */
   --border: #e2e8f0;
-  --text: #1e293b;             /* primary text */
-  --text-muted: #64748b;       /* secondary text */
+  --text: #1e293b; /* primary text */
+  --text-muted: #64748b; /* secondary text */
 
   /* Semantic (status badges, alerts) */
-  --success: #166534; --success-bg: #dcfce7;
-  --warning: #9a3412; --warning-bg: #ffedd5;
-  --danger:  #991b1b; --danger-bg:  #fee2e2;
-  --info:    #1e40af; --info-bg:    #dbeafe;
+  --success: #166534;
+  --success-bg: #dcfce7;
+  --warning: #9a3412;
+  --warning-bg: #ffedd5;
+  --danger: #991b1b;
+  --danger-bg: #fee2e2;
+  --info: #1e40af;
+  --info-bg: #dbeafe;
 }
 ```
 
@@ -132,12 +136,20 @@ Generate one reusable stylesheet. Put theme variables and reusable component cla
 let Tailwind utility classes handle the rest. Suggested starting point:
 
 ```css
-:root { /* paste the color tokens from above here */ }
+:root {
+  /* paste the color tokens from above here */
+}
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
   line-height: 1.6;
 }
 
@@ -149,46 +161,110 @@ body {
   padding: 1.5rem;
 }
 
-.kpi-card { border-top: 3px solid var(--primary); }
-.kpi-value { font-size: 1.875rem; font-weight: 700; line-height: 1.1; }
-.kpi-label { color: var(--text-muted); font-size: 0.8125rem; }
+.kpi-card {
+  border-top: 3px solid var(--primary);
+}
+.kpi-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.kpi-label {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
 
 .badge {
-  display: inline-flex; align-items: center;
-  padding: 0.25rem 0.75rem; border-radius: 9999px;
-  font-size: 0.75rem; font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
-.badge--success { background: var(--success-bg); color: var(--success); }
-.badge--warning { background: var(--warning-bg); color: var(--warning); }
-.badge--danger  { background: var(--danger-bg);  color: var(--danger); }
-.badge--info    { background: var(--info-bg);    color: var(--info); }
-.badge--active  { background: var(--primary);    color: var(--on-primary); }
+.badge--success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.badge--warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.badge--danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.badge--info {
+  background: var(--info-bg);
+  color: var(--info);
+}
+.badge--active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
 
 .btn-primary {
-  background: var(--primary); color: var(--on-primary);
-  font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.5rem;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
 }
-.btn-primary:hover { background: var(--primary-strong); }
+.btn-primary:hover {
+  background: var(--primary-strong);
+}
 
-.report-nav { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.report-nav {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
 .report-nav a {
-  padding: 0.5rem 0.875rem; border-radius: 0.5rem;
-  color: var(--text-muted); font-weight: 500; text-decoration: none;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-decoration: none;
 }
-.report-nav a:hover { background: var(--primary-soft); color: var(--text); }
-.report-nav a.active { background: var(--primary); color: var(--on-primary); }
+.report-nav a:hover {
+  background: var(--primary-soft);
+  color: var(--text);
+}
+.report-nav a.active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
 
-table { width: 100%; border-collapse: collapse; }
-th { text-align: left; color: var(--text-muted); font-size: 0.8125rem;
-     padding: 0.75rem; border-bottom: 1px solid var(--border); }
-td { padding: 0.75rem; border-bottom: 1px solid var(--border); }
-tr:hover td { background: var(--primary-soft); }
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+tr:hover td {
+  background: var(--primary-soft);
+}
 ```
 
-Every HTML page imports it and does not redefine these styles. Use a bare relative path
-(no `./` prefix) so it resolves correctly when the folder is served with `npx serve ./report`:
+Every HTML page imports it and does not redefine these styles. The stylesheet path depends
+on the page: **`index.html` uses `./index.css`** (with the `./` prefix), while **every other
+page uses a bare relative path** (`index.css`, no prefix) so it resolves correctly when the
+folder is served with `npx serve ./report`:
 
 ```html
+<!-- index.html -->
+<link rel="stylesheet" href="./index.css" />
+
+<!-- all other pages (findings.html, risks.html, …) -->
 <link rel="stylesheet" href="index.css" />
 ```
 
@@ -199,18 +275,19 @@ Every page starts from this shell:
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="index.css" />
-  <title>Report — [Ticket / Topic]</title>
-</head>
-<body class="min-h-screen">
-  <!-- nav (only if more than one page) -->
-  <!-- header -->
-  <!-- content -->
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- index.html: use "./index.css" — every other page: use "index.css" -->
+    <link rel="stylesheet" href="index.css" />
+    <title>Report — [Ticket / Topic]</title>
+  </head>
+  <body class="min-h-screen">
+    <!-- nav (only if more than one page) -->
+    <!-- header -->
+    <!-- content -->
+  </body>
 </html>
 ```
 
