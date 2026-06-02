@@ -167,11 +167,24 @@ install_all_deps() {
 # File helpers
 # ---------------------------------------------------------------------------
 
+# Backup an existing file to <dst>.bak-<timestamp> before overwrite.
+backup_file() {
+  local dst="$1"
+  local bak="${dst}.bak-$(date +%Y%m%d%H%M%S)"
+  cp -f "$dst" "$bak" && info "Backed up $dst → $bak"
+}
+
 install_file() {
   local src="$1"
   local dst="$2"
   if [ -f "$dst" ]; then
-    warn "Skipping $dst (exists). Backup first or remove manually."
+    if [ "${FORCE:-}" = "1" ]; then
+      backup_file "$dst"
+      cp -f "$src" "$dst"
+      info "Installed $dst (overwrote)"
+    else
+      warn "Skipping $dst (exists). Set FORCE=1 to back up and overwrite."
+    fi
   else
     cp -f "$src" "$dst"
     info "Installed $dst"
@@ -232,7 +245,13 @@ install_hooks() {
 
 install_settings() {
   if [ -f "$CLAUDE_DIR/settings.json" ]; then
-    warn "settings.json exists — skipping. Merge manually if needed."
+    if [ "${FORCE:-}" = "1" ]; then
+      backup_file "$CLAUDE_DIR/settings.json"
+      cp -f "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
+      info "Installed $CLAUDE_DIR/settings.json (overwrote)"
+    else
+      warn "settings.json exists — skipping. Set FORCE=1 to back up and overwrite (merge manually if needed)."
+    fi
   else
     cp -f "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
     info "Installed $CLAUDE_DIR/settings.json"
