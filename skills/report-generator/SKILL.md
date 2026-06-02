@@ -36,12 +36,16 @@ but the brand palette below overrides any default accent color that skill sugges
 
 Reports are real files the user will download and open, so:
 
-1. Build files in your working directory, then copy the finished report folder to
-   `/mnt/user-data/outputs/` and present it with the file tool so the user can download it.
-2. Each report lives in its **own directory** named after the ticket or topic
-   (e.g. `JIRA-1234/`), so multiple reports never collide.
-3. Multi-file reports use relative links (`./findings.html`). These resolve correctly only
-   when the whole folder is downloaded together — present the folder, not a single file.
+1. Write reports under `./report/` in the current project (e.g. `./report/JIRA-1234/`).
+   Create the `./report/` directory if it does not exist. After building, present the
+   folder path so the user can open it. Do **not** write to `/tmp` or `/mnt/user-data/`.
+2. Each report lives in its **own directory** under `./report/`, named after the ticket
+   or topic (e.g. `./report/JIRA-1234/`), so multiple reports never collide.
+3. Multi-file reports use relative links **without a `./` prefix** (`findings.html`, not
+   `./findings.html`). The user typically serves the report folder with `npx serve ./report`,
+   so pages are reached at `report/[TICKET]/index.html`; bare relative links resolve cleanly
+   under the static server and still work when the folder is downloaded and opened directly.
+   Present the folder, not a single file.
 4. If the user just wants a quick preview in chat, a single self-contained `index.html`
    (with the CSS inlined in a `<style>` block) renders better inline. Default to the
    multi-file structure unless the user signals they only want a quick look.
@@ -181,10 +185,11 @@ td { padding: 0.75rem; border-bottom: 1px solid var(--border); }
 tr:hover td { background: var(--primary-soft); }
 ```
 
-Every HTML page imports it and does not redefine these styles:
+Every HTML page imports it and does not redefine these styles. Use a bare relative path
+(no `./` prefix) so it resolves correctly when the folder is served with `npx serve ./report`:
 
 ```html
-<link rel="stylesheet" href="./index.css" />
+<link rel="stylesheet" href="index.css" />
 ```
 
 ## Page template
@@ -198,7 +203,7 @@ Every page starts from this shell:
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="./index.css" />
+  <link rel="stylesheet" href="index.css" />
   <title>Report — [Ticket / Topic]</title>
 </head>
 <body class="min-h-screen">
@@ -231,9 +236,9 @@ reader never gets stranded, and mark the current page with `class="active"`:
 
 ```html
 <nav class="report-nav card">
-  <a href="./index.html" class="active">Overview</a>
-  <a href="./findings.html">Findings</a>
-  <a href="./technical-analysis.html">Technical Analysis</a>
+  <a href="index.html" class="active">Overview</a>
+  <a href="findings.html">Findings</a>
+  <a href="technical-analysis.html">Technical Analysis</a>
 </nav>
 ```
 
@@ -263,11 +268,11 @@ The report's value is accuracy, so:
 
 ## Quick checklist before presenting
 
-- [ ] `index.html` and `index.css` exist in a dedicated `[TICKET]/` folder.
+- [ ] `index.html` and `index.css` exist in a dedicated `./report/[TICKET]/` folder.
 - [ ] No styles duplicated across pages; all pages import `index.css`.
 - [ ] Brand amber used for accents; dark text on every amber fill (contrast).
 - [ ] Status badges follow the semantic color convention.
 - [ ] Nav present and correct on every page (if multi-page).
 - [ ] Layout responsive at mobile and laptop widths.
 - [ ] No fabricated data; gaps flagged.
-- [ ] Folder copied to `/mnt/user-data/outputs/` and presented for download.
+- [ ] Folder written to `./report/[TICKET]/` and its path presented to the user.
