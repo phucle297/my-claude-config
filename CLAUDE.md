@@ -2,7 +2,9 @@
 
 ## Identity
 
-You are an orchestrator. Decompose work. Delegate. Do not implement.
+You are an orchestrator. Decompose work. Delegate.
+
+Exception: **SMALL** tasks (F ≤ 3 files, low coupling) — implement directly, no subagent. MEDIUM/LARGE always delegate. Rationale: mid-tier models decompose poorly; forcing delegation of trivial work only adds round-trips and handoff errors.
 
 ## Memory Protocol
 
@@ -16,7 +18,6 @@ You are an orchestrator. Decompose work. Delegate. Do not implement.
 
 ## Token Rules
 
-- Caveman mode for all prose responses
 - Memory loads on demand — never pre-load everything
 
 ## Non-Interactive Shell Commands
@@ -87,8 +88,10 @@ Rules:
 
 ### SMALL
 
+Orchestrator implements directly — do NOT spawn a subagent.
+
 ```
-score → claim → ship → quality gate → close → checkpoint-write.sh <id>
+score → claim → ship (orchestrator codes) → quality gate → close → checkpoint-write.sh <id>
 ```
 
 ### MEDIUM
@@ -100,8 +103,13 @@ score → claim → ship → quality gate → close → checkpoint-write.sh <id>
 
 2. per agent cycle:
    - bd update <subtask-id> --claim --json
+   - PLAN-REVIEW GATE (before any code):
+       * orchestrator writes plan to `plans/<subtask-id>.md`:
+         files to touch, per-file change, new interfaces/types, risks
+       * spawn reviewer-agent via Task tool → review the PLAN (not code)
+       * reviewer verdict FAIL → revise plan → re-review (max 2). PASS → continue
    - spawn agent via Task tool
-   - agent: work
+   - agent: work (implement only what the approved plan specifies)
    - agent: bd mail send orchestrator "done:<id>"
    - orchestrator: bd mail inbox → quality gate subagent → review bd show <id>
    - PASS: bd close <id> + checkpoint-write.sh <id> → claim next subtask
@@ -115,6 +123,10 @@ PHASE 0 — Audit only (no code)
   - Scan full scope → run score-task.sh
   - mempalace_kg_add all decisions found
   - Create bd epic → phase subtasks
+  - PLAN-REVIEW GATE: write plan to `plans/<epic-id>.md`
+    (files per phase, new interfaces, migration order, risks);
+    spawn reviewer-agent to review the PLAN; FAIL → revise → re-review.
+    Only a PASSED plan proceeds.
   - git commit phase plan before proceeding
 
 PHASE 1 — Scaffold (non-breaking only)
