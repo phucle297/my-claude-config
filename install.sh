@@ -270,8 +270,13 @@ install_claude_plugins() {
     return
   fi
   step "Installing Claude plugins..."
-  claude plugin install caveman@caveman         || warn "caveman install failed"
-  claude plugin install beads@beads-marketplace || warn "beads install failed"
+  # Order must match enabledPlugins in settings.json.
+  claude plugin install caveman@caveman                         || warn "caveman install failed"
+  claude plugin install beads@beads-marketplace                 || warn "beads install failed"
+  claude plugin install superpowers@claude-plugins-official     || warn "superpowers install failed"
+  claude plugin install context7@claude-plugins-official        || warn "context7 install failed"
+  claude plugin install code-simplifier@claude-plugins-official || warn "code-simplifier install failed"
+  claude plugin install skill-creator@claude-plugins-official   || warn "skill-creator install failed"
   info "Claude plugins installed"
 }
 
