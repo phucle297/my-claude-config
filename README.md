@@ -301,12 +301,13 @@ bd init
 touch .beads/PRIME.md
 mempalace --palace ~/.mempalace/<project> init .
 
-# OPENCODE_PROJECT_SLUG is used by opencode.json mempalace MCP config
-# Set it to your project name — add to shell rc alongside OMO_SCRIPTS
-export OPENCODE_PROJECT_SLUG="<project>"
-
-# Set OMO_SCRIPTS so AGENTS.md scripts resolve — add to shell rc
-export OMO_SCRIPTS="$HOME/.config/opencode/scripts"
+# OPENCODE_PROJECT_SLUG is auto-derived — no manual export needed.
+# install.sh adds an opencode/claude shell wrapper that sets it from the
+# git root basename on each launch (block marked "oh-my-openagent slug" in
+# your fish/bash/zsh rc). OMO_SCRIPTS is set in the same block.
+# Override per-project only if you want a slug that differs from the repo name:
+#   set -x OPENCODE_PROJECT_SLUG "<custom>"   # fish
+#   export OPENCODE_PROJECT_SLUG="<custom>"   # bash/zsh
 
 # Verify
 opencode models                 # your configured provider/model listed

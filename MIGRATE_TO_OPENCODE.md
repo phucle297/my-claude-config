@@ -70,8 +70,10 @@ cd ~/Projects/<org>/<project>
 bd init && touch .beads/PRIME.md
 mempalace --palace ~/.mempalace/<project> init .
 
-export OPENCODE_PROJECT_SLUG="<project>"
-export OMO_SCRIPTS="$HOME/.config/opencode/scripts"
+# OPENCODE_PROJECT_SLUG + OMO_SCRIPTS are auto-set by the opencode/claude
+# shell wrapper that install.sh writes to your rc (slug = git root basename).
+# No manual export needed. Override only for a custom slug:
+#   export OPENCODE_PROJECT_SLUG="<custom>"
 
 # Verify
 opencode models

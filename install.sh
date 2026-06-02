@@ -134,12 +134,19 @@ ensure_opencode() {
 ensure_omo() {
   step "Installing oh-my-openagent (omo)..."
   ensure_node
+  # --no-tui requires the subscription flags. Repo is Claude-centric → claude
+  # defaults yes, others no. Override via OMO_CLAUDE/OMO_GEMINI/OMO_COPILOT.
+  local omo_claude="${OMO_CLAUDE:-yes}"
+  local omo_gemini="${OMO_GEMINI:-no}"
+  local omo_copilot="${OMO_COPILOT:-no}"
+  local omo_flags=(install --no-tui --platform=opencode --skip-auth
+    "--claude=$omo_claude" "--gemini=$omo_gemini" "--copilot=$omo_copilot")
   if has bunx; then
-    bunx oh-my-openagent install --no-tui --platform=opencode --skip-auth 2>/dev/null || \
+    bunx oh-my-openagent "${omo_flags[@]}" || \
       warn "omo install via bunx failed"
   else
-    npx oh-my-openagent install --no-tui --platform=opencode --skip-auth 2>/dev/null || \
-      warn "omo install failed — run manually: npx oh-my-openagent install"
+    npx oh-my-openagent "${omo_flags[@]}" || \
+      warn "omo install failed — run manually: npx oh-my-openagent ${omo_flags[*]}"
   fi
   info "omo installed"
 }
@@ -296,17 +303,64 @@ install_opencode_plugins() {
   fi
 }
 
-suggest_shell_rc() {
-  echo ""
-  echo "Add to your shell rc file (per project, update OPENCODE_PROJECT_SLUG):"
-  if [[ -f "$HOME/.config/fish/config.fish" ]]; then
-    echo "  # fish (~/.config/fish/config.fish):"
-    echo "  set -x OMO_SCRIPTS \"\$HOME/.config/opencode/scripts\""
-    echo "  set -x OPENCODE_PROJECT_SLUG \"<project>\""
+OMO_RC_MARKER_BEGIN="# >>> oh-my-openagent slug >>>"
+OMO_RC_MARKER_END="# <<< oh-my-openagent slug <<<"
+
+# Write/refresh the marker block in an rc file (idempotent).
+# $1 = rc file path, $2 = block body
+_omo_write_rc_block() {
+  local rc="$1" body="$2"
+  [[ -f "$rc" ]] || touch "$rc" 2>/dev/null || { warn "cannot write $rc"; return 1; }
+  # Strip any previous block, then append the fresh one.
+  if grep -qF "$OMO_RC_MARKER_BEGIN" "$rc"; then
+    local tmp
+    tmp="$(mktemp)" || return 1
+    awk -v b="$OMO_RC_MARKER_BEGIN" -v e="$OMO_RC_MARKER_END" '
+      $0==b {skip=1; next} $0==e {skip=0; next} !skip {print}
+    ' "$rc" > "$tmp" && cat "$tmp" > "$rc"
+    rm -f "$tmp"
   fi
-  echo "  # bash/zsh (~/.bashrc or ~/.zshrc):"
-  echo "  export OMO_SCRIPTS=\"\$HOME/.config/opencode/scripts\""
-  echo "  export OPENCODE_PROJECT_SLUG=\"<project>\""
+  {
+    printf '%s\n' "$OMO_RC_MARKER_BEGIN"
+    printf '%s\n' "$body"
+    printf '%s\n' "$OMO_RC_MARKER_END"
+  } >> "$rc"
+  info "Updated $rc"
+}
+
+# Auto-install shell wrapper that derives OPENCODE_PROJECT_SLUG from the git
+# root (or cwd) at launch time — no per-project manual env var needed.
+install_shell_function() {
+  step "Installing shell slug wrapper (auto OPENCODE_PROJECT_SLUG)..."
+
+  # fish — uses functions; derive slug from git root basename.
+  local fish_rc="$HOME/.config/fish/config.fish"
+  if [[ -f "$fish_rc" || "${SHELL:-}" == *fish* ]]; then
+    mkdir -p "$HOME/.config/fish"
+    _omo_write_rc_block "$fish_rc" 'set -gx OMO_SCRIPTS "$HOME/.config/opencode/scripts"
+function __omo_slug
+    basename (git rev-parse --show-toplevel 2>/dev/null; or pwd)
+end
+function opencode
+    set -lx OPENCODE_PROJECT_SLUG (__omo_slug)
+    command opencode $argv
+end
+function claude
+    set -lx OPENCODE_PROJECT_SLUG (__omo_slug)
+    command claude $argv
+end'
+  fi
+
+  # bash / zsh — POSIX function form, safe for both rc files.
+  local posix_body='export OMO_SCRIPTS="$HOME/.config/opencode/scripts"
+__omo_slug() { basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; }
+opencode() { OPENCODE_PROJECT_SLUG="$(__omo_slug)" command opencode "$@"; }
+claude()   { OPENCODE_PROJECT_SLUG="$(__omo_slug)" command claude "$@"; }'
+  [[ -f "$HOME/.bashrc" || "${SHELL:-}" == *bash* ]] && _omo_write_rc_block "$HOME/.bashrc" "$posix_body"
+  [[ -f "$HOME/.zshrc"  || "${SHELL:-}" == *zsh*  ]] && _omo_write_rc_block "$HOME/.zshrc"  "$posix_body"
+
+  echo "  Slug now auto-derived from git root basename on each opencode/claude launch."
+  echo "  Restart shell or source your rc to activate."
 }
 
 print_opencode_next_steps() {
@@ -326,7 +380,7 @@ print_opencode_next_steps() {
   echo ""
   echo "Verify:"
   echo "  opencode models && bd status && npx oh-my-openagent doctor"
-  suggest_shell_rc
+  install_shell_function
 }
 
 # ---------------------------------------------------------------------------
