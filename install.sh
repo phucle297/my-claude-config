@@ -167,37 +167,25 @@ install_all_deps() {
 # File helpers
 # ---------------------------------------------------------------------------
 
-# Backup an existing file to <dst>.bak-<timestamp> before overwrite.
-backup_file() {
+# Move a tracked top-level config dir (e.g. ~/.claude, ~/.config/opencode,
+# ~/.cursor, ~/.codex) aside as <dir>.bak-<ts> so we can rebuild it fresh
+# from source. Avoids littering the parent with per-file .bak-N copies.
+backup_tracked_dir() {
   local dst="$1"
+  [ -d "$dst" ] || return 0
   local bak="${dst}.bak-$(date +%Y%m%d%H%M%S)"
-  cp -f "$dst" "$bak" && info "Backed up $dst → $bak"
+  mv "$dst" "$bak" && info "Backed up $dst → $bak"
 }
 
-install_file() {
-  local src="$1"
-  local dst="$2"
-  if [ -f "$dst" ]; then
-    if [ "${FORCE:-}" = "1" ]; then
-      backup_file "$dst"
-      cp -f "$src" "$dst"
-      info "Installed $dst (overwrote)"
-    else
-      warn "Skipping $dst (exists). Set FORCE=1 to back up and overwrite."
-    fi
-  else
-    cp -f "$src" "$dst"
-    info "Installed $dst"
-  fi
-}
-
+# Copy every *.sh from SCRIPT_DIR/scripts/ into <dst_dir> and chmod +x.
 install_scripts_to() {
-  local dest="$1"
+  local dst_dir="$1"
   for f in "$SCRIPT_DIR/scripts/"*.sh; do
-    local dst="$dest/$(basename "$f")"
-    install_file "$f" "$dst"
-    chmod +x "$dst"
+    [ -f "$f" ] || continue
+    cp -f "$f" "$dst_dir/$(basename "$f")"
+    chmod +x "$dst_dir/$(basename "$f")"
   done
+  info "Installed scripts to $dst_dir"
 }
 
 # ---------------------------------------------------------------------------
@@ -213,54 +201,40 @@ install_claude_scripts() { install_scripts_to "$CLAUDE_DIR/scripts"; }
 
 install_agents() {
   for f in "$SCRIPT_DIR/agents/"*.md; do
-    install_file "$f" "$CLAUDE_DIR/agents/$(basename "$f")"
+    [ -f "$f" ] || continue
+    cp -f "$f" "$CLAUDE_DIR/agents/$(basename "$f")"
   done
+  info "Installed agents to $CLAUDE_DIR/agents"
 }
 
 install_skills() {
   [ -d "$SCRIPT_DIR/skills" ] || return 0
-  mkdir -p "$CLAUDE_DIR/skills"
   for d in "$SCRIPT_DIR/skills/"*/; do
     [ -d "$d" ] || continue
-    local name dst
-    name="$(basename "$d")"
-    dst="$CLAUDE_DIR/skills/$name"
-    if [ -d "$dst" ]; then
-      warn "Skipping skill $name (exists). Backup first or remove manually."
-    else
-      cp -rf "$d" "$dst"
-      info "Installed skill $name"
-    fi
+    cp -rf "$d" "$CLAUDE_DIR/skills/"
   done
+  info "Installed skills to $CLAUDE_DIR/skills"
 }
 
 install_hooks() {
   for f in "$SCRIPT_DIR/hooks/"*.sh "$SCRIPT_DIR/hooks/"*.js; do
     [ -f "$f" ] || continue
-    local dst="$CLAUDE_DIR/hooks/$(basename "$f")"
-    install_file "$f" "$dst"
-    [[ "$f" == *.sh ]] && chmod +x "$dst"
+    cp -f "$f" "$CLAUDE_DIR/hooks/$(basename "$f")"
   done
+  # Re-apply executable bit on .sh files.
+  find "$CLAUDE_DIR/hooks" -maxdepth 1 -type f -name '*.sh' -exec chmod +x {} +
+  info "Installed hooks to $CLAUDE_DIR/hooks"
 }
 
 install_settings() {
-  if [ -f "$CLAUDE_DIR/settings.json" ]; then
-    if [ "${FORCE:-}" = "1" ]; then
-      backup_file "$CLAUDE_DIR/settings.json"
-      cp -f "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
-      info "Installed $CLAUDE_DIR/settings.json (overwrote)"
-    else
-      warn "settings.json exists — skipping. Set FORCE=1 to back up and overwrite (merge manually if needed)."
-    fi
-  else
-    cp -f "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
-    info "Installed $CLAUDE_DIR/settings.json"
-  fi
+  cp -f "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
+  info "Installed $CLAUDE_DIR/settings.json"
 }
 
 install_claude_md() {
-  install_file "$SCRIPT_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
-  install_file "$SCRIPT_DIR/CLAUDE_TEMPLATE_PROJECT.md" "$CLAUDE_DIR/CLAUDE_TEMPLATE_PROJECT.md"
+  cp -f "$SCRIPT_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+  cp -f "$SCRIPT_DIR/CLAUDE_TEMPLATE_PROJECT.md" "$CLAUDE_DIR/CLAUDE_TEMPLATE_PROJECT.md"
+  info "Installed CLAUDE.md + CLAUDE_TEMPLATE_PROJECT.md"
 }
 
 install_claude_plugins() {
@@ -312,14 +286,9 @@ install_opencode_scripts() { install_scripts_to "$OPENCODE_DIR/scripts"; }
 
 install_omo_config() {
   local src="$SCRIPT_DIR/.opencode/oh-my-openagent.json"
-  local dst="$OPENCODE_DIR/oh-my-openagent.json"
   if [ -f "$src" ]; then
-    if [ -f "$dst" ]; then
-      warn "oh-my-openagent.json exists — skipping. Merge manually if needed."
-    else
-      cp -f "$src" "$dst"
-      info "Installed $dst"
-    fi
+    cp -f "$src" "$OPENCODE_DIR/oh-my-openagent.json"
+    info "Installed $OPENCODE_DIR/oh-my-openagent.json"
   fi
 
   local tui_dst="$OPENCODE_DIR/tui.json"
@@ -332,8 +301,7 @@ install_omo_config() {
 install_opencode_plugins() {
   for f in "$SCRIPT_DIR/.opencode/plugins/"*; do
     [ -f "$f" ] || continue
-    local dst="$OPENCODE_DIR/plugins/$(basename "$f")"
-    install_file "$f" "$dst"
+    cp -f "$f" "$OPENCODE_DIR/plugins/$(basename "$f")"
   done
   if [ ! -f "$OPENCODE_DIR/package.json" ]; then
     printf '{\n  "dependencies": {\n    "@opencode-ai/plugin": "latest"\n  }\n}\n' > "$OPENCODE_DIR/package.json"
@@ -452,10 +420,6 @@ install_cursor_rules() {
   # Cursor uses .cursor/rules/*.mdc per-project (not a global file path).
   # We stage a .mdc template at ~/.cursor/workflow-template.mdc for users to copy.
   local dst="$CURSOR_DIR/workflow-template.mdc"
-  if [ -f "$dst" ]; then
-    warn "Skipping $dst (exists). Backup first or remove manually."
-    return
-  fi
   {
     printf -- '---\ndescription: AI orchestrator workflow — bd task tracking, session protocol, quality gates\nalwaysApply: true\n---\n\n'
     cat "$SCRIPT_DIR/CLAUDE.md"
@@ -503,7 +467,8 @@ setup_codex_dirs() {
 install_codex_scripts() { install_scripts_to "$CODEX_DIR/scripts"; }
 
 install_codex_instructions() {
-  install_file "$SCRIPT_DIR/AGENTS.md" "$CODEX_DIR/instructions.md"
+  cp -f "$SCRIPT_DIR/AGENTS.md" "$CODEX_DIR/instructions.md"
+  info "Installed $CODEX_DIR/instructions.md"
 }
 
 print_codex_next_steps() {
@@ -528,6 +493,7 @@ install_platform() {
   case "$1" in
     claude)
       step "Configuring Claude Code..."
+      backup_tracked_dir "$CLAUDE_DIR"
       setup_claude_dirs
       install_claude_md
       install_claude_scripts
@@ -542,6 +508,7 @@ install_platform() {
       step "Configuring OpenCode + omo..."
       ensure_opencode
       ensure_omo
+      backup_tracked_dir "$OPENCODE_DIR"
       setup_opencode_dirs
       install_omo_config
       install_opencode_scripts
@@ -551,6 +518,7 @@ install_platform() {
       ;;
     cursor)
       step "Configuring Cursor..."
+      backup_tracked_dir "$CURSOR_DIR"
       setup_cursor_dirs
       install_cursor_scripts
       install_cursor_rules
@@ -558,6 +526,7 @@ install_platform() {
       ;;
     codex)
       step "Configuring Codex..."
+      backup_tracked_dir "$CODEX_DIR"
       setup_codex_dirs
       install_codex_scripts
       install_codex_instructions
