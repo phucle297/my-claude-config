@@ -25,6 +25,13 @@
           },
           {
             "type": "command",
+            "command": "bash \"$HOME/.claude/scripts/session-start.sh\" 2>/dev/null || true",
+            "timeout": 10,
+            "async": true,
+            "statusMessage": "Reloading checkpoint..."
+          },
+          {
+            "type": "command",
             "command": "bash \"$HOME/.claude/hooks/agent_mail_register.sh\" 2>/dev/null || true",
             "async": true
           }
@@ -45,11 +52,23 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/scripts/guard-claim.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$HOME/.local/share/mcp_agent_mail\" && uv run python -m mcp_agent_mail.cli file_reservations soon \"$PWD\" --minutes 10 2>/dev/null || true"
+            "command": "cd \"$HOME/.local/share/mcp_agent_mail\" && uv run python -m mcp_agent_mail.cli file_reservations soon \"$PWD\" --minutes 10 2>/dev/null || true",
+            "async": true,
+            "timeout": 5
           }
         ]
       }
