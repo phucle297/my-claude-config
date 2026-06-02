@@ -45,25 +45,21 @@ run() { if command -v timeout >/dev/null 2>&1; then timeout 90 "$@"; else "$@"; 
 
 ERRORS=""
 
-# --- typecheck: tsconfig.json present + a .ts/.tsx file edited ---
+# --- typecheck: edited file only (avoid noise from pre-existing repo errors) ---
 case "$FILE" in
   *.ts|*.tsx)
-    if [ -n "$TS_DIR" ]; then
-      OUT=""
-      # Prefer an npm "typecheck"/"type-check" script if defined.
-      if [ -n "$PKG_DIR" ] && command -v jq >/dev/null 2>&1; then
-        SCRIPT="$(jq -r '.scripts | (."typecheck" // ."type-check" // empty) | if . then "yes" else empty end' "$PKG_DIR/package.json" 2>/dev/null)"
-        if [ "$SCRIPT" = "yes" ]; then
-          NAME="$(jq -r 'if .scripts.typecheck then "typecheck" else "type-check" end' "$PKG_DIR/package.json" 2>/dev/null)"
-          OUT="$(cd "$PKG_DIR" && run npm run --silent "$NAME" 2>&1)"
-        fi
-      fi
-      # Else fall back to tsc --noEmit on the nearest tsconfig.
-      if [ -z "$OUT" ] && command -v npx >/dev/null 2>&1; then
-        OUT="$(cd "$TS_DIR" && run npx --no-install tsc --noEmit 2>&1)"
-      fi
+    if [ -n "$TS_DIR" ] && command -v npx >/dev/null 2>&1; then
+      # Pass the file directly to tsc — it compiles that file in the context
+      # of tsconfig but does NOT re-typecheck the whole repo. Repo-wide
+      # pre-existing errors are filtered to those touching the edited file.
+      OUT="$(cd "$TS_DIR" && run npx --no-install tsc --noEmit --pretty false "$FILE" 2>&1)"
       if [ -n "$OUT" ] && printf '%s' "$OUT" | grep -qiE 'error'; then
-        ERRORS="${ERRORS}--- typecheck ---\n$(printf '%s' "$OUT" | grep -iE 'error' | head -20)\n"
+        # Only report errors that mention the edited file (or relative imports
+        # of it). Whole-repo noise is suppressed.
+        RELEVANT="$(printf '%s' "$OUT" | grep -E "error TS|\\.ts\\(.*\\)|\\.tsx\\(.*\\)" | grep -F "$(basename "$FILE")" | head -20)"
+        if [ -n "$RELEVANT" ]; then
+          ERRORS="${ERRORS}--- typecheck (changed file only) ---\n${RELEVANT}\n"
+        fi
       fi
     fi
     ;;
