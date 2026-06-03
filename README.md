@@ -92,7 +92,8 @@ claude-config/
     ├── checkpoint-write.sh         # Save task state to bd kv + PRIME.md
     ├── guard-claim.sh              # Block edits without claimed task
     ├── score-task.sh               # Score task size: SMALL / MEDIUM / LARGE
-    ├── jira-to-bd.sh               # Find or create bead for a Jira key
+    ├── jira-to-bd.sh               # Find or create bead for a Jira key (auto-nests under $BD_WORKTREE_EPIC)
+    ├── worktree-task.sh            # Create worktree + per-worktree epic (shared beads DB, logical split)
     └── adversarial-verify.js       # Claude Code Workflow — 3-skeptic adversarial verify
 ```
 

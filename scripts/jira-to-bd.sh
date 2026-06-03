@@ -12,6 +12,12 @@ set -euo pipefail
 JIRA_KEY="${1:-}"
 PARENT_ID="${2:-}"
 
+# No explicit parent? If inside a worktree that sourced .beads-worktree.env,
+# nest the new bead under that worktree's epic (set by worktree-task.sh).
+if [ -z "$PARENT_ID" ] && [ -n "${BD_WORKTREE_EPIC:-}" ]; then
+  PARENT_ID="$BD_WORKTREE_EPIC"
+fi
+
 if [ -z "$JIRA_KEY" ]; then
   echo "Usage: jira-to-bd.sh <JIRA-KEY> [parent-bd-id]" >&2
   exit 1
