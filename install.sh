@@ -132,23 +132,49 @@ ensure_opencode() {
 }
 
 ensure_omo() {
-  step "Installing oh-my-openagent (omo)..."
+  step "Installing oh-my-openagent (omo) globally for user..."
   ensure_node
-  # --no-tui requires the subscription flags. Repo is Claude-centric → claude
-  # defaults yes, others no. Override via OMO_CLAUDE/OMO_GEMINI/OMO_COPILOT.
-  local omo_claude="${OMO_CLAUDE:-yes}"
-  local omo_gemini="${OMO_GEMINI:-no}"
-  local omo_copilot="${OMO_COPILOT:-no}"
-  local omo_flags=(install --no-tui --platform=opencode --skip-auth
-    "--claude=$omo_claude" "--gemini=$omo_gemini" "--copilot=$omo_copilot")
-  if has bunx; then
-    bunx oh-my-openagent "${omo_flags[@]}" || \
-      warn "omo install via bunx failed"
+
+  # `npx oh-my-openagent install` is per-project (writes to cwd). For omo to
+  # work in any dir, the npm package must be on opencode's global plugin
+  # path — $OPENCODE_DIR/node_modules/ — so opencode.jsonc's
+  # "oh-my-openagent@latest" entry resolves regardless of cwd.
+  mkdir -p "$OPENCODE_DIR"
+  local pkg="$OPENCODE_DIR/package.json"
+  if [ ! -f "$pkg" ]; then
+    printf '{\n  "dependencies": {\n    "oh-my-openagent": "latest",\n    "@opencode-ai/plugin": "latest"\n  }\n}\n' > "$pkg"
+    info "Created $pkg"
+  elif has jq; then
+    local has_omo
+    has_omo=$(jq -r '.dependencies["oh-my-openagent"] // empty' "$pkg" 2>/dev/null)
+    if [ -z "$has_omo" ]; then
+      local tmp="${pkg}.tmp"
+      jq '.dependencies["oh-my-openagent"] = "latest"' "$pkg" > "$tmp" \
+        && mv "$tmp" "$pkg" \
+        && info "Added oh-my-openagent to $pkg"
+    fi
   else
-    npx oh-my-openagent "${omo_flags[@]}" || \
-      warn "omo install failed — run manually: npx oh-my-openagent ${omo_flags[*]}"
+    warn "jq not found — manually add \"oh-my-openagent\": \"latest\" to $pkg then run: cd $OPENCODE_DIR && npm install"
   fi
-  info "omo installed"
+
+  if has npm; then
+    if (cd "$OPENCODE_DIR" && npm install --silent 2>/dev/null); then
+      if [ -d "$OPENCODE_DIR/node_modules/oh-my-openagent" ]; then
+        info "omo installed globally → $OPENCODE_DIR/node_modules/oh-my-openagent"
+      else
+        warn "npm install finished but oh-my-openagent not found in $OPENCODE_DIR/node_modules — check network/registry"
+      fi
+    else
+      warn "npm install in $OPENCODE_DIR failed — run manually: cd $OPENCODE_DIR && npm install"
+      return 1
+    fi
+  elif has bun; then
+    (cd "$OPENCODE_DIR" && bun install --silent 2>/dev/null) \
+      && info "omo installed via bun → $OPENCODE_DIR/node_modules/oh-my-openagent"
+  else
+    warn "neither npm nor bun found — install Node.js then run: cd $OPENCODE_DIR && npm install"
+    return 1
+  fi
 }
 
 install_all_deps() {
@@ -285,16 +311,42 @@ setup_opencode_dirs() {
 install_opencode_scripts() { install_scripts_to "$OPENCODE_DIR/scripts"; }
 
 install_omo_config() {
+  # omo v4.7.x does not export a "./tui" subpath, so omo must be registered
+  # as a regular server plugin in opencode.jsonc — NOT via tui.json, which
+  # would resolve "oh-my-openagent/tui" as a GitHub URL and fail with
+  # NpmInstallFailedError on every opencode launch in any cwd.
   local src="$SCRIPT_DIR/.opencode/oh-my-openagent.json"
   if [ -f "$src" ]; then
     cp -f "$src" "$OPENCODE_DIR/oh-my-openagent.json"
     info "Installed $OPENCODE_DIR/oh-my-openagent.json"
   fi
 
+  local cfg="$OPENCODE_DIR/opencode.jsonc"
+  if [ ! -f "$cfg" ]; then
+    cfg="$OPENCODE_DIR/opencode.json"
+  fi
+  if [ ! -f "$cfg" ]; then
+    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "plugin": ["oh-my-openagent@latest"]\n}\n' > "$OPENCODE_DIR/opencode.jsonc"
+    info "Installed $OPENCODE_DIR/opencode.jsonc (omo registered globally)"
+  elif has jq; then
+    local has_omo
+    has_omo=$(jq -r '.plugin // [] | map(select(. == "oh-my-openagent" or . == "oh-my-openagent@latest" or (type == "string" and startswith("oh-my-openagent@")))) | .[0] // empty' "$cfg" 2>/dev/null)
+    if [ -z "$has_omo" ]; then
+      local tmp="${cfg}.tmp"
+      jq '.plugin = ((.plugin // []) + ["oh-my-openagent@latest"])' "$cfg" > "$tmp" \
+        && mv "$tmp" "$cfg" \
+        && info "Added oh-my-openagent@latest to $cfg plugin list (global)"
+    else
+      info "oh-my-openagent already in $cfg plugin list ($has_omo)"
+    fi
+  else
+    warn "jq not found — manually add \"oh-my-openagent@latest\" to the plugin array in $cfg"
+  fi
+
   local tui_dst="$OPENCODE_DIR/tui.json"
-  if [ ! -f "$tui_dst" ]; then
-    printf '{\n  "plugin": ["oh-my-openagent/tui"]\n}\n' > "$tui_dst"
-    info "Installed $tui_dst"
+  if [ -f "$tui_dst" ] && grep -q 'oh-my-openagent/tui' "$tui_dst" 2>/dev/null; then
+    local bak="${tui_dst}.bak-$(date +%Y%m%d%H%M%S)"
+    mv -f "$tui_dst" "$bak" && info "Quarantined unresolvable $tui_dst → $bak"
   fi
 }
 
@@ -303,9 +355,20 @@ install_opencode_plugins() {
     [ -f "$f" ] || continue
     cp -f "$f" "$OPENCODE_DIR/plugins/$(basename "$f")"
   done
-  if [ ! -f "$OPENCODE_DIR/package.json" ]; then
-    printf '{\n  "dependencies": {\n    "@opencode-ai/plugin": "latest"\n  }\n}\n' > "$OPENCODE_DIR/package.json"
-    info "Created $OPENCODE_DIR/package.json"
+  local pkg="$OPENCODE_DIR/package.json"
+  if [ ! -f "$pkg" ]; then
+    printf '{\n  "dependencies": {\n    "@opencode-ai/plugin": "latest",\n    "oh-my-openagent": "latest"\n  }\n}\n' > "$pkg"
+    info "Created $pkg"
+  elif has jq; then
+    # Idempotent re-add in case ensure_omo was skipped.
+    local has_omo
+    has_omo=$(jq -r '.dependencies["oh-my-openagent"] // empty' "$pkg" 2>/dev/null)
+    if [ -z "$has_omo" ]; then
+      local tmp="${pkg}.tmp"
+      jq '.dependencies["oh-my-openagent"] = "latest"' "$pkg" > "$tmp" \
+        && mv "$tmp" "$pkg" \
+        && info "Added oh-my-openagent to $pkg"
+    fi
   fi
   if has npm; then
     (cd "$OPENCODE_DIR" && npm install --silent 2>/dev/null) && info "opencode plugin deps installed"
@@ -318,9 +381,29 @@ install_opencode_plugins() {
 install_opencode_agents() {
   local dst_dir="$SCRIPT_DIR/.opencode/agent"
   mkdir -p "$dst_dir"
+  # OpenCode's agent schema wants `tools` as an object map {name: bool},
+  # whereas Claude Code uses a YAML array. Convert array -> object on sync.
+  # Builtins are lowercased (Read->read); mcp__* names kept verbatim.
   for f in "$SCRIPT_DIR/agents/"*.md; do
     [ -f "$f" ] || continue
-    cp -f "$f" "$dst_dir/$(basename "$f")"
+    awk '
+      /^tools: \[/ {
+        line = $0
+        sub(/^tools: \[/, "", line)
+        sub(/\].*$/, "", line)
+        n = split(line, a, ",")
+        print "tools:"
+        for (i = 1; i <= n; i++) {
+          t = a[i]
+          gsub(/^[ \t]+|[ \t]+$/, "", t)
+          if (t == "") continue
+          if (t !~ /^mcp__/) t = tolower(t)
+          print "  " t ": true"
+        }
+        next
+      }
+      { print }
+    ' "$f" > "$dst_dir/$(basename "$f")"
   done
   info "Synced $(ls "$dst_dir"/*.md 2>/dev/null | wc -l) agent file(s) to $dst_dir"
 }
@@ -388,6 +471,16 @@ claude()   { OPENCODE_PROJECT_SLUG="$(__omo_slug)" command claude "$@"; }'
 print_opencode_next_steps() {
   echo ""
   echo "=== OpenCode + omo setup done ==="
+  echo ""
+  if [ -d "$OPENCODE_DIR/node_modules/oh-my-openagent" ] && grep -q 'oh-my-openagent' "$OPENCODE_DIR/opencode.jsonc" 2>/dev/null; then
+    echo "omo global install: $OPENCODE_DIR/node_modules/oh-my-openagent"
+    echo "  registered in $OPENCODE_DIR/opencode.jsonc plugin list"
+    echo "  → omo loads from any directory"
+  else
+    echo "WARNING: omo not fully installed"
+    echo "  npm pkg:    $OPENCODE_DIR/node_modules/oh-my-openagent (missing? run: cd $OPENCODE_DIR && npm install)"
+    echo "  plugin reg: $OPENCODE_DIR/opencode.jsonc (missing? ensure \"oh-my-openagent@latest\" in plugin array)"
+  fi
   echo ""
   echo "Per-project setup (run once per repo):"
   echo "  cd ~/Projects/<org>/<project>"
@@ -507,12 +600,12 @@ install_platform() {
     opencode)
       step "Configuring OpenCode + omo..."
       ensure_opencode
-      ensure_omo
       backup_tracked_dir "$OPENCODE_DIR"
       setup_opencode_dirs
       install_omo_config
       install_opencode_scripts
       install_opencode_plugins
+      ensure_omo
       install_opencode_agents
       print_opencode_next_steps
       ;;
@@ -639,7 +732,6 @@ main() {
         echo ""
         install_all_deps
         ensure_opencode
-        ensure_omo
         install_platform claude
         echo ""
         echo "---"

@@ -717,12 +717,16 @@ opencode models           # list all available models for your configured provid
 opencode providers        # re-run auth if provider missing
 ```
 
-**omo TUI sidebar missing:**
+**omo TUI sidebar missing / `oh-my-openagent/tui` resolution error:**
 
 ```bash
-# Ensure tui.json exists at ~/.config/opencode/tui.json with:
-# { "plugin": ["oh-my-openagent/tui"] }
+# omo v4.7.x does not export a "./tui" subpath. The plugin must be
+# registered as a regular server plugin in opencode.jsonc, not via tui.json.
+ls ~/.config/opencode/opencode.jsonc   # should contain "oh-my-openagent@latest"
+ls ~/.config/opencode/node_modules/oh-my-openagent  # should exist
 npx oh-my-openagent doctor
+# If ~/.config/opencode/tui.json still references "oh-my-openagent/tui",
+# quarantine it: mv ~/.config/opencode/tui.json{,.bak-$(date +%s)}
 ```
 
 **Concurrency throttled by provider:**
