@@ -3,11 +3,13 @@
   "model": "minimax-coding-plan/MiniMax-M3",
   "small_model": "minimax-coding-plan/MiniMax-M3",
   "permission": "allow",
-  "plugin": [
-    "./.opencode/plugins/workflow-hooks",
-    "oh-my-openagent@latest"
-  ],
+  "plugin": ["./.opencode/plugins/workflow-hooks", "oh-my-openagent@latest"],
   "mcp": {
+    "jira": {
+      "type": "remote",
+      "url": "https://mcp.atlassian.com/v1/mcp/authv2",
+      "enabled": true
+    },
     "mempalace": {
       "type": "local",
       "command": [
@@ -27,3 +29,4 @@
     }
   }
 }
+
