@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Per-project mempalace MCP launcher.
+#
+# Claude Code and Codex both spawn stdio MCP servers with cwd = the
+# workspace/project directory. We derive a per-project palace from that cwd
+# so each repo gets its own memories + knowledge graph:
+#     <repo>  ->  ~/.mempalace/projects/<repo-basename>
+#
+# Launched outside a git repo (or directly from $HOME) we fall back to the
+# shared default palace (~/.mempalace/palace, per ~/.mempalace/config.json)
+# so pre-existing global memories stay reachable.
+#
+# Passing --palace also isolates mempalace's knowledge_graph.sqlite3 per
+# project (it otherwise stays at the default path unless --palace is given).
+#
+# Registered ONCE per tool — the per-project split happens here at launch:
+#   Claude: claude mcp add mempalace -s user -- ~/.local/bin/mempalace-project
+#   Codex:  codex  mcp add mempalace    -- ~/.local/bin/mempalace-project
+set -euo pipefail
+
+mp="$(command -v mempalace-mcp 2>/dev/null || true)"
+[ -n "$mp" ] || mp="$HOME/.local/bin/mempalace-mcp"
+
+root="$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null || true)"
+
+if [ -z "$root" ] || [ "$root" = "$HOME" ]; then
+  # No project context — use the shared default palace.
+  exec "$mp" "$@"
+fi
+
+slug="$(basename "$root")"
+exec "$mp" --palace "$HOME/.mempalace/projects/$slug" "$@"
