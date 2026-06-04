@@ -73,7 +73,7 @@
       "command": ["mempalace-mcp", "--palace", "{env:HOME}/.mempalace/{env:OPENCODE_PROJECT_SLUG}"],
       "enabled": true
     },
-    "agent-mail": {
+    "mcp-agent-mail": {
       "type": "remote",
       "url": "http://127.0.0.1:8765/api/",
       "headers": {

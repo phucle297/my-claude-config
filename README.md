@@ -555,21 +555,26 @@ first.
 | -------------------------------- | --------------------------------------------------------- | ------------------------------------------------ |
 | `SessionStart`                   | `hooks/caveman-activate.js`                               | Caveman mode badge + system prompt activation    |
 | `SessionStart`                   | `scripts/session-start.sh`                                | Reload last bd checkpoint + ready tasks (async)  |
-| `SessionStart`                   | `hooks/agent_mail_register.sh`                            | Register agent identity with agent-mail (async)  |
+| `SessionStart`                   | `hooks/agent_mail_register.sh`                            | Register agent identity with mcp-agent-mail (async) |
 | `UserPromptSubmit`               | `hooks/mempalace-prompt-hook.js`                          | Inject relevant mempalace memory                 |
 | `PreToolUse: Edit\|Write\|MultiEdit` | `scripts/guard-claim.sh`                              | Block edits when no bd task is claimed           |
 | `PreToolUse: Edit`               | `mcp_agent_mail … file_reservations soon`                 | Warn on stale file reservations (async, 5 s)     |
 | `PostToolUse: Edit\|Write\|MultiEdit` | `scripts/verify-edit.sh`                             | Post-edit verification / typecheck (async)       |
-| `PostToolUse: Bash`              | `hooks/check_inbox.sh`                                    | Poll agent-mail inbox (async, 120 s rate limit)  |
+| `PostToolUse: Bash`              | `hooks/check_inbox.sh`                                    | Poll mcp-agent-mail inbox (async, 120 s rate limit) |
 | `Stop`                           | `scripts/session-end.sh` (nohup)                          | Checkpoint write + bd prime in background        |
 
-> **Provider routing:** `settings.json` sets `ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic`
-> and `ANTHROPIC_MODEL=MiniMax-M3` (plus matching `ANTHROPIC_DEFAULT_*_MODEL` and
-> `CLAUDE_CODE_SUBAGENT_MODEL`). The top-level `"model": "opusplan"` field is
-> overridden by these env vars, so **the CLI talks to the MiniMax / minimax
-> endpoint, not real Anthropic Claude**. If you clone this repo and want real
-> Claude, delete the four `ANTHROPIC_*` env entries and remove
-> `ANTHROPIC_AUTH_TOKEN` before launching `claude`.
+> **Provider routing:** The repo's `settings.json` is a **MINIMAL default**
+> (hooks + plugins + theme only — no `model` or `env`). It does **NOT** force
+> any provider. `./install.sh claude` preserves any existing
+> `~/.claude/settings.json` and will not overwrite your personal model /
+> provider config.
+>
+> To route Claude Code through a custom endpoint (minimax / MiniMax / your
+> own proxy), copy the `model` + `env` blocks from
+> **`settings.example.jsonc`** into your `~/.claude/settings.json`. The
+> example file shows the full reference template with comments — including
+> the MiniMax M3 setup. To use real Anthropic Claude instead, just don't add
+> any provider env vars; Claude Code falls back to defaults.
 
 ## Hooks (OpenCode — via workflow-hooks.ts plugin)
 

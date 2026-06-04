@@ -37,8 +37,19 @@ install_hooks() {
 }
 
 install_settings() {
+  # NEVER overwrite an existing user settings.json — it likely contains a
+  # personal model / provider / env config that took time to tune. The repo
+  # settings.json is a MINIMAL default (hooks + plugins only, no provider).
+  # See settings.example.jsonc for the full reference template including a
+  # minimax/MiniMax provider-routing example.
+  if [ -f "$CLAUDE_DIR/settings.json" ]; then
+    warn "$CLAUDE_DIR/settings.json already exists — preserving your config"
+    warn "  To customize: edit ~/.claude/settings.json directly"
+    warn "  Reference template: $SCRIPT_DIR/settings.example.jsonc"
+    return
+  fi
   cp -f "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
-  info "Installed $CLAUDE_DIR/settings.json"
+  info "Installed $CLAUDE_DIR/settings.json (minimal default — see settings.example.jsonc to add a provider)"
 }
 
 install_claude_md() {
@@ -53,6 +64,16 @@ install_claude_plugins() {
     warn "Install Claude Code from https://claude.ai/download then re-run: ./install.sh claude"
     return
   fi
+  step "Installing Claude marketplaces..."
+  # Register marketplaces first so the install commands can resolve them.
+  # `claude plugin marketplace add` is idempotent — it refreshes the cache if
+  # the marketplace already exists. extraKnownMarketplaces in settings.json
+  # is NOT enough: the CLI's marketplace cache must be initialized or every
+  # install errors with "Plugin not found in marketplace".
+  claude plugin marketplace add JuliusBrussee/caveman              2>/dev/null || warn "caveman marketplace add failed"
+  claude plugin marketplace add gastownhall/beads                  2>/dev/null || warn "beads marketplace add failed"
+  claude plugin marketplace add anthropics/claude-plugins-official 2>/dev/null || warn "official marketplace add failed"
+
   step "Installing Claude plugins..."
   # Order must match enabledPlugins in settings.json.
   claude plugin install caveman@caveman                         || warn "caveman install failed"
@@ -91,7 +112,7 @@ print_claude_next_steps() {
   echo ""
   echo "=== Claude Code setup done ==="
   echo ""
-  echo "Start agent-mail server (required for inbox hooks):"
+  echo "Start mcp-agent-mail server (required for inbox hooks):"
   echo "  cd ~/.local/share/mcp_agent_mail && uv run python -m mcp_agent_mail.server &"
   echo ""
   echo "mempalace is registered ONCE (user scope) and auto-resolves to a"

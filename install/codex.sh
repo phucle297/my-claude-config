@@ -25,7 +25,7 @@ install_codex_instructions() {
 
 # Register MCP servers in ~/.codex/config.toml to match Claude's set:
 #   - context7  (stdio) — registered via `codex mcp add` (no auth)
-#   - agent-mail (streamable HTTP) — needs a STATIC bearer header, which
+#   - mcp-agent-mail (streamable HTTP) — needs a STATIC bearer header, which
 #     `codex mcp add` cannot set (it only supports --bearer-token-env-var),
 #     so we read the token from ~/.claude.json and append the TOML table.
 # Both steps are idempotent: `codex mcp get` skips servers already present.
@@ -36,7 +36,7 @@ install_codex_mcp() {
   fi
   touch "$CODEX_DIR/config.toml"
   install_codex_context7
-  install_codex_agentmail
+  install_codex_mcp_agent_mail
   install_codex_mempalace
 }
 
@@ -51,16 +51,16 @@ install_codex_context7() {
     || warn "Failed to register context7 MCP"
 }
 
-# agent-mail — streamable HTTP with a STATIC bearer header, which
+# mcp-agent-mail — streamable HTTP with a STATIC bearer header, which
 # `codex mcp add` cannot set (only --bearer-token-env-var), so we read the
 # token from ~/.claude.json and append the TOML table directly.
-install_codex_agentmail() {
-  if codex mcp get agent-mail &>/dev/null; then
-    info "agent-mail MCP already registered"
+install_codex_mcp_agent_mail() {
+  if codex mcp get mcp-agent-mail &>/dev/null; then
+    info "mcp-agent-mail MCP already registered"
     return
   fi
   if ! has jq; then
-    warn "jq not found — cannot read agent-mail token. Skipping agent-mail MCP."
+    warn "jq not found — cannot read mcp-agent-mail token. Skipping mcp-agent-mail MCP."
     return
   fi
   local cfg="$CODEX_DIR/config.toml"
@@ -68,19 +68,19 @@ install_codex_agentmail() {
   token="$(jq -r '.mcpServers["mcp-agent-mail"].headers.Authorization // empty' \
     "$HOME/.claude.json" 2>/dev/null | sed 's/^Bearer //')"
   if [ -z "$token" ]; then
-    warn "agent-mail token not in ~/.claude.json — skipping. Add manually to $cfg:"
-    warn '  [mcp_servers.agent-mail]'
+    warn "mcp-agent-mail token not in ~/.claude.json — skipping. Add manually to $cfg:"
+    warn '  [mcp_servers.mcp-agent-mail]'
     warn '  url = "http://127.0.0.1:8765/api/"'
     warn '  http_headers = { Authorization = "Bearer <TOKEN>" }'
     return
   fi
   cat >> "$cfg" <<EOF
 
-[mcp_servers.agent-mail]
+[mcp_servers.mcp-agent-mail]
 url = "http://127.0.0.1:8765/api/"
 http_headers = { Authorization = "Bearer $token" }
 EOF
-  info "Registered agent-mail MCP (token from ~/.claude.json)"
+  info "Registered mcp-agent-mail MCP (token from ~/.claude.json)"
 }
 
 # mempalace — per-project palace via the cwd-deriving wrapper. Codex spawns
@@ -115,7 +115,7 @@ print_codex_next_steps() {
   echo "Set env var (add to shell rc):"
   echo "  export CODEX_SCRIPTS=\"\$HOME/.codex/scripts\""
   echo ""
-  echo "Verify MCP servers (context7 + agent-mail + mempalace):"
+  echo "Verify MCP servers (context7 + mcp-agent-mail + mempalace):"
   echo "  codex mcp list        # or /mcp inside a codex session"
 }
 

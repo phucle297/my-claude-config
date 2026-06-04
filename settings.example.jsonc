@@ -1,0 +1,210 @@
+// =============================================================================
+// settings.example.jsonc
+// =============================================================================
+// REFERENCE TEMPLATE for ~/.claude/settings.json.
+//
+// This file is NOT read by Claude Code at runtime — Claude Code only reads
+// ~/.claude/settings.json (strict JSON, no comments). It exists in the repo
+// so you can see the full configuration shape and copy what you need into
+// your personal settings.json.
+//
+// Usage:
+//   1. Open your personal settings file:
+//        $EDITOR ~/.claude/settings.json
+//   2. Copy any section you want to customize (model, env, hooks, plugins).
+//   3. Save and restart Claude Code.
+//
+// The repo's settings.json (the file that gets installed on first run) is a
+// MINIMAL default — it contains only the universal workflow bits (hooks,
+// plugins, theme) and does NOT force any provider. The previous version
+// hardcoded a specific provider (minimax M3) and silently overwrote your
+// personal settings.json on `./install.sh claude`. That behavior is gone.
+//
+// If you want real Anthropic Claude, set `model` to a real Claude model and
+// delete the ANTHROPIC_* env entries below. If you want the minimax/MiniMax
+// setup shown here, copy the `model` + `env` blocks into your settings.json.
+// =============================================================================
+{
+  // ---------------------------------------------------------------------------
+  // Model selection
+  // ---------------------------------------------------------------------------
+  // "opusplan" → Opus for planning, Sonnet for execution. Default for most
+  // users on a real Anthropic key.
+  // For a custom provider, also set ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN
+  // in the `env` block below — these env vars override model resolution.
+  "model": "opusplan",
+
+  // ---------------------------------------------------------------------------
+  // Provider routing (custom endpoint example — minimax / MiniMax)
+  // ---------------------------------------------------------------------------
+  // These env vars route Claude Code through a custom OpenAI-compatible
+  // endpoint instead of the real Anthropic API. The values below are the
+  // MiniMax / minimax M3 setup. Replace with your own provider or DELETE the
+  // entire `env` block to talk to real Anthropic Claude.
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.minimax.io/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "<MINIMAX_API_KEY>",
+    "API_TIMEOUT_MS": "3000000",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "ANTHROPIC_MODEL": "MiniMax-M3",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "MiniMax-M3",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "MiniMax-M3",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "minimax-m2.5-lightning",
+    "ANTHROPIC_SMALL_FAST_MODEL": "minimax-m2.5-lightning",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "MiniMax-M3",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+
+  // ---------------------------------------------------------------------------
+  // Workflow hooks (universal — keep these)
+  // ---------------------------------------------------------------------------
+  // These wire up the caveman / mempalace / beads / agent-mail workflow.
+  // They are project-managed and safe to keep across providers.
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/hooks/caveman-activate.js\"",
+            "timeout": 5,
+            "statusMessage": "Loading caveman mode..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/scripts/session-start.sh\" 2>/dev/null || true",
+            "timeout": 15,
+            "statusMessage": "Reloading checkpoint..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/agent_mail_register.sh\" 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ~/.claude/hooks/mempalace-prompt-hook.js",
+            "timeout": 3,
+            "statusMessage": "Loading memory..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/scripts/guard-claim.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$HOME/.local/share/mcp_agent_mail\" && uv run python -m mcp_agent_mail.cli file_reservations soon \"$PWD\" --minutes 10 2>/dev/null || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/scripts/verify-edit.sh\"",
+            "timeout": 120,
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "SLUG=$(printf '%s' \"$PWD\" | tr '/' '-' | tr -cd 'a-zA-Z0-9-'); AGENT_NAME=$(printf '%s' \"$PWD\" | tr -cd 'a-zA-Z0-9' | tail -c 12); REG_TOKEN=$(cat \"/tmp/mcp-regtoken-${SLUG}\" 2>/dev/null || echo ''); AGENT_MAIL_PROJECT=\"$PWD\" AGENT_MAIL_AGENT=\"${AGENT_MAIL_AGENT:-cc-${AGENT_NAME}}\" AGENT_MAIL_URL='http://127.0.0.1:8765/api/' AGENT_MAIL_REGISTRATION_TOKEN=\"$REG_TOKEN\" AGENT_MAIL_HOOK_FORMAT='json' AGENT_MAIL_INTERVAL='120' \"$HOME/.claude/hooks/check_inbox.sh\" 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "nohup bash ~/.claude/scripts/session-end.sh > /tmp/claude-session-end.log 2>&1 &",
+            "timeout": 5,
+            "statusMessage": "Saving session state..."
+          }
+        ]
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------------------------
+  // Statusline badge (caveman token counter)
+  // ---------------------------------------------------------------------------
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"$HOME/.claude/hooks/caveman-statusline.sh\""
+  },
+
+  // ---------------------------------------------------------------------------
+  // Plugins (universal — these are project-managed Claude Code plugins)
+  // ---------------------------------------------------------------------------
+  "enabledPlugins": {
+    "beads@beads-marketplace": true,
+    "superpowers@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "caveman@caveman": true
+  },
+
+  // ---------------------------------------------------------------------------
+  // Extra marketplaces (project pins specific plugin sources)
+  // ---------------------------------------------------------------------------
+  "extraKnownMarketplaces": {
+    "beads-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "gastownhall/beads"
+      }
+    },
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Misc toggles
+  // ---------------------------------------------------------------------------
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark-ansi",
+  "effortLevel": "xhigh",
+  "disableWorkflows": false
+}
