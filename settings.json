@@ -17,11 +17,6 @@
             "command": "bash \"$HOME/.claude/scripts/session-start.sh\" 2>/dev/null || true",
             "timeout": 15,
             "statusMessage": "Reloading checkpoint..."
-          },
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/agent_mail_register.sh\" 2>/dev/null || true",
-            "async": true
           }
         ]
       }
@@ -48,17 +43,6 @@
             "timeout": 5
           }
         ]
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd \"$HOME/.local/share/mcp_agent_mail\" && uv run python -m mcp_agent_mail.cli file_reservations soon \"$PWD\" --minutes 10 2>/dev/null || true",
-            "async": true,
-            "timeout": 5
-          }
-        ]
       }
     ],
     "PostToolUse": [
@@ -69,16 +53,6 @@
             "type": "command",
             "command": "bash \"$HOME/.claude/scripts/verify-edit.sh\"",
             "timeout": 120,
-            "async": true
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "SLUG=$(printf '%s' \"$PWD\" | tr '/' '-' | tr -cd 'a-zA-Z0-9-'); AGENT_NAME=$(printf '%s' \"$PWD\" | tr -cd 'a-zA-Z0-9' | tail -c 12); REG_TOKEN=$(cat \"/tmp/mcp-regtoken-${SLUG}\" 2>/dev/null || echo ''); AGENT_MAIL_PROJECT=\"$PWD\" AGENT_MAIL_AGENT=\"${AGENT_MAIL_AGENT:-cc-${AGENT_NAME}}\" AGENT_MAIL_URL='http://127.0.0.1:8765/api/' AGENT_MAIL_TOKEN='aabebf4faba1f9f9bedf133a0cb1ff71d1a8d406903a7881951336beb798b8a6' AGENT_MAIL_REGISTRATION_TOKEN=\"$REG_TOKEN\" AGENT_MAIL_HOOK_FORMAT='json' AGENT_MAIL_INTERVAL='120' \"$HOME/.claude/hooks/check_inbox.sh\" 2>/dev/null || true",
             "async": true
           }
         ]

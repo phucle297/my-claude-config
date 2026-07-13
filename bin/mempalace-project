@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Per-project mempalace MCP launcher.
 #
-# Claude Code and Codex both spawn stdio MCP servers with cwd = the
+# Claude Code and Grok Build CLI spawn stdio MCP servers with cwd = the
 # workspace/project directory. We derive a per-project palace from that cwd
 # so each repo gets its own memories + knowledge graph:
 #     <repo>  ->  ~/.mempalace/projects/<repo-basename>
@@ -13,9 +13,9 @@
 # Passing --palace also isolates mempalace's knowledge_graph.sqlite3 per
 # project (it otherwise stays at the default path unless --palace is given).
 #
-# Registered ONCE per tool — the per-project split happens here at launch:
-#   Claude: claude mcp add mempalace -s user -- ~/.local/bin/mempalace-project
-#   Codex:  codex  mcp add mempalace    -- ~/.local/bin/mempalace-project
+# Registered once per tool (user scope) — per-project split happens at launch:
+#   claude mcp add mempalace -s user -- ~/.local/bin/mempalace-project
+#   grok   mcp add mempalace -- ~/.local/bin/mempalace-project
 set -euo pipefail
 
 mp="$(command -v mempalace-mcp 2>/dev/null || true)"

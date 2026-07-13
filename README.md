@@ -1,6 +1,17 @@
 ## Overview
 
-`claude-config` is a personal setup for building a structured, scalable, and persistent workflow around AI coding agents. It is **multi-tool**: install the same workflow into whichever AI coding tool you use — **Claude Code**, **OpenCode + oh-my-openagent**, **Cursor**, or **OpenAI Codex CLI**. You pick one (or more); the installer configures only what you select. Model and provider are user-configured; the workflow is model-agnostic.
+`claude-config` is a personal setup for building a structured, scalable, and persistent workflow around AI coding agents. It supports **Claude Code** and **Grok Build CLI** — install either or both.
+
+| | Claude Code | Grok Build CLI |
+|---|---|---|
+| Global rules | `~/.claude/CLAUDE.md` | `~/.grok/AGENTS.md` |
+| Scripts | `~/.claude/scripts/` | `~/.grok/scripts/` |
+| Agents | `~/.claude/agents/` | `~/.grok/agents/` |
+| Hooks | `~/.claude/settings.json` | `~/.grok/hooks/workflow.json` |
+| Config | `~/.claude/settings.json` | `~/.grok/config.toml` |
+| Project template | `CLAUDE.md` | `AGENTS.md` |
+
+Model and provider are user-configured; the workflow is model-agnostic.
 
 The main goal is to solve common problems when working with AI coding agents at scale:
 
@@ -17,13 +28,12 @@ The main goal is to solve common problems when working with AI coding agents at 
 
 | Tool                    | Purpose                                                    |
 | ----------------------- | ---------------------------------------------------------- |
-| Supported AI tools      | Claude Code, OpenCode + omo, Cursor, Codex — pick any      |
+| Supported AI tools      | Claude Code, Grok Build CLI — pick either or both          |
 | beads (`bd`)            | Task management, claiming, checkpoints, orchestration      |
 | dolt                    | Backend database required by beads                         |
 | mempalace               | Cross-session persistent memory system                     |
 | MCP servers             | Extend agents with external tools and memory               |
-| bv                      | Code coupling & architecture analysis                      |
-| caveman plugin          | Compressed AI communication mode (Claude Code only)        |
+| caveman plugin          | Compressed AI communication mode (Claude; optional on Grok)|
 | Hooks system            | Automates session lifecycle and safety checks              |
 
 ---
@@ -32,7 +42,7 @@ The main goal is to solve common problems when working with AI coding agents at 
 
 ### Persistent AI Memory
 
-`mempalace` retains long-term project knowledge across sessions — no rebuilding context every time. Works across any supported tool via MCP.
+`mempalace` retains long-term project knowledge across sessions — no rebuilding context every time. Works on both tools via MCP + the shared `mempalace-project` wrapper.
 
 ### Task-Based Workflow
 
@@ -40,15 +50,16 @@ The main goal is to solve common problems when working with AI coding agents at 
 
 ### Safe Autonomous Editing
 
-Custom hooks prevent accidental edits unless a task is explicitly claimed.
+Custom hooks prevent accidental edits unless a task is explicitly claimed (Claude `settings.json` hooks + Grok `~/.grok/hooks/workflow.json`).
 
 ### Session Recovery
 
 Automatic checkpointing restores previous work context when a new session starts.
 
-### Parallel Agent Orchestration (omo)
+### Parallel Agent Orchestration
 
-oh-my-openagent Team Mode runs up to 3 concurrent agents. Set `background_task.providerConcurrency` in `oh-my-openagent.json` to match your provider's rate limits. For 15+ agent fan-outs, use Claude Code ultracode.
+- **Claude Code** — agent teams / ultracode; agents in `~/.claude/agents/`
+- **Grok Build** — `spawn_subagent` + agents in `~/.grok/agents/`
 
 ---
 
@@ -56,191 +67,94 @@ oh-my-openagent Team Mode runs up to 3 concurrent agents. Set `background_task.p
 
 ```
 claude-config/
-├── install.sh                      # Installer — auto-detect + multi-platform menu
-├── openpackage.yml                 # OpenPackage manifest — enables opkg migration
+├── install.sh                      # Installer — Claude Code and/or Grok Build
 ├── CLAUDE.md                       # Global Claude Code instructions (→ ~/.claude/CLAUDE.md)
-├── CLAUDE_TEMPLATE_PROJECT.md      # Per-project template (→ CLAUDE.md in each repo)
-├── AGENTS.md                       # OpenCode/Codex orchestrator rules + quality gate protocol
-├── opencode.json                   # OpenCode project config — omo plugin + MCP servers
+├── AGENTS.md                       # Global Grok Build instructions (→ ~/.grok/AGENTS.md)
+├── CLAUDE_TEMPLATE_PROJECT.md      # Per-project template (→ CLAUDE.md or AGENTS.md)
 ├── settings.json                   # Claude Code settings (→ ~/.claude/settings.json)
-├── agents/                         # Universal agent definitions (source of truth)
-│   ├── frontend-dev.md             # OpenPackage converts → .opencode/agent/ automatically
-│   ├── reviewer.md                 # Code review — correctness, style
-│   ├── security-reviewer.md        # Defensive security audit — vulns, secrets, unsafe patterns
-│   ├── test-writer.md              # TDD — failing test first, then minimal code
-│   ├── debugger.md                 # Systematic debug — reproduce, isolate, root-cause
-│   ├── planner.md                  # Decompose spec/Jira → bd epic + sized subtasks
-│   └── quality-gate.md             # 5-dimension quality gate before bd close
-├── skills/                         # Claude Code skills (→ ~/.claude/skills/)
-│   └── report-generator/           # Render reports as branded HTML dashboards
-│       └── SKILL.md
-├── .opencode/
-│   ├── oh-my-openagent.json        # omo global config (agent behavior, team mode)
-│   ├── plugins/
-│   │   └── workflow-hooks.ts       # OpenCode session lifecycle plugin (start/end/inbox)
-│   └── agent/                      # Auto-generated by OpenPackage — do not edit manually
-│       ├── frontend-dev.md
-│       ├── reviewer.md
-│       ├── security-reviewer.md
-│       ├── test-writer.md
-│       ├── debugger.md
-│       ├── planner.md
-│       └── quality-gate.md
-└── scripts/
-    ├── session-start.sh            # Reload checkpoint + tasks
-    ├── session-end.sh              # Save checkpoint
-    ├── checkpoint-write.sh         # Save task state to bd kv + PRIME.md
-    ├── guard-claim.sh              # Block edits without claimed task
-    ├── score-task.sh               # Score task size: SMALL / MEDIUM / LARGE
-    ├── jira-to-bd.sh               # Find or create bead for a Jira key (auto-nests under $BD_WORKTREE_EPIC)
-    ├── worktree-task.sh            # Create worktree + per-worktree epic (shared beads DB, logical split)
-    └── adversarial-verify.js       # Claude Code Workflow — 3-skeptic adversarial verify
+├── settings.example.jsonc          # Claude reference template (model / provider)
+├── config.example.toml             # Grok Build reference template (→ optional merge)
+├── agents/                         # Agent definitions (shared source)
+│   ├── frontend-dev.md
+│   ├── reviewer.md
+│   ├── security-reviewer.md
+│   ├── test-writer.md
+│   ├── debugger.md
+│   ├── planner.md
+│   └── quality-gate.md
+├── skills/                         # Skills (→ ~/.claude/skills/ and ~/.grok/skills/)
+├── hooks/
+│   ├── *.js / *.sh                 # Claude hooks (→ ~/.claude/hooks/)
+│   └── grok-workflow.json          # Grok hooks (→ ~/.grok/hooks/workflow.json)
+└── scripts/                        # Workflow scripts (→ ~/.claude/scripts/ and ~/.grok/scripts/)
+    ├── session-start.sh
+    ├── session-end.sh
+    ├── checkpoint-write.sh
+    ├── guard-claim.sh
+    ├── score-task.sh
+    ├── jira-to-bd.sh
+    ├── worktree-task.sh
+    ├── verify-edit.sh
+    └── adversarial-verify.js
 ```
 
-Scripts install location per platform:
+Scripts install location:
 
 | Platform | Scripts go to |
 |---|---|
 | Claude Code | `~/.claude/scripts/` |
-| OpenCode | `~/.config/opencode/scripts/` |
-| Cursor | `~/.cursor/scripts/` |
-| Codex | `~/.codex/scripts/` |
+| Grok Build | `~/.grok/scripts/` |
 
 ---
 
 ## Prerequisites
 
-### Shared (all tools)
-
-#### 1. dolt (required by beads)
+#### Shared
 
 ```bash
+# dolt (required by beads)
 curl -L https://github.com/dolthub/dolt/releases/latest/download/install.sh | bash
-```
 
-#### 2. beads (bd CLI)
-
-```bash
+# beads (bd CLI)
 curl -sSL https://raw.githubusercontent.com/gastownhall/beads/main/scripts/install.sh | bash
-```
 
-#### 3. bv + mcp_agent_mail
-
-```bash
-curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/mcp_agent_mail/main/scripts/install.sh?$(date +%s)" | bash -s -- --yes --skip-beads
-```
-
-Installs `bv` (coupling analyzer) and `mcp-agent-mail` MCP server. `--skip-beads` skips the bundled beads-rust variant.
-
-Add alias:
-
-```bash
-# fish / bash / zsh
-alias am='cd "/root/.local/share/mcp_agent_mail" && scripts/run_server_with_token.sh'
-```
-
-#### 4. mempalace
-
-```bash
-# https://github.com/mempalace/mempalace
-```
-
-Provides `mempalace` CLI and `mempalace-mcp` binary for cross-session memory.
-
-#### 5. jq
-
-```bash
+# mempalace — https://github.com/mempalace/mempalace
+# jq
 sudo apt install jq   # or brew install jq
 ```
 
----
-
-### Jira (Atlassian) — manual, platform-specific
-
-The Atlassian integration is **intentionally NOT auto-installed** because the
-install differs between Claude Code and OpenCode, and the marketplace
-identifier is still in flux. Set it up manually before relying on the
-Jira-driven flow described in `CLAUDE.md` / `AGENTS.md`.
-
-**Claude Code** — install the official plugin:
-
-```bash
-claude plugin install atlassian@claude-plugins-official
-```
-
-**OpenCode** — Atlassian is configured as an **MCP server**, not a Claude
-plugin. Add the `atlassian` MCP server to your `opencode.json` (or via
-`opencode mcp`):
-
-```json
-{
-  "mcp": {
-    "atlassian": {
-      "type": "remote",
-      "url": "https://mcp.atlassian.com/v1",
-      "oauth": {}
-    }
-  }
-}
-```
-
-After either setup, restart your AI tool so it picks up the new plugin / MCP
-server. The Jira intake flow (`jira-to-bd.sh` → `score-task.sh` → claim) only
-works once this is wired up.
-
----
-
-### Claude Code
+#### Claude Code
 
 ```bash
 # Download from https://claude.ai/download
 ```
 
+#### Grok Build CLI
+
+```bash
+curl -fsSL https://x.ai/cli/install.sh | bash
+grok login   # browser auth on first use
+```
+
 ---
 
-### OpenCode + omo
+### Jira (Atlassian) — manual
 
-#### 1. OpenCode CLI
+The Atlassian integration is **intentionally NOT auto-installed**.
 
-```bash
-curl -fsSL https://opencode.ai/install | bash
-```
-
-#### 2. oh-my-openagent (omo)
+**Claude Code:**
 
 ```bash
-npx oh-my-openagent install --no-tui --platform=opencode --skip-auth
+claude plugin install atlassian@claude-plugins-official
 ```
 
-> `bun` / `bunx` is preferred if available: `bunx oh-my-openagent install`
-
-#### 3. Configure your provider
-
-Run the interactive auth flow:
+**Grok Build:** add Atlassian as an MCP server (remote) in `~/.grok/config.toml` or via:
 
 ```bash
-opencode providers
-# or: opencode auth
+grok mcp add --transport http atlassian https://mcp.atlassian.com/v1
 ```
 
-This registers your API key(s) for whichever provider you use (Anthropic, OpenAI, Gemini, MiniMax, etc.).
-
-Alternatively, add a custom provider directly in `opencode.json`:
-
-```json
-"provider": {
-  "my-provider": {
-    "npm": "@ai-sdk/anthropic",
-    "options": {
-      "baseURL": "https://api.my-provider.io/anthropic/v1",
-      "apiKey": "{env:MY_PROVIDER_API_KEY}"
-    },
-    "models": { "model-name": { "name": "model-name" } }
-  }
-}
-```
-
-Then set which model omo agents use via `opencode models` and update `background_task.providerConcurrency` in `oh-my-openagent.json` to match your provider's rate limits.
+(Use the official Atlassian MCP URL for your setup; OAuth may be required.)
 
 ---
 
@@ -252,34 +166,14 @@ cd claude-config
 ./install.sh
 ```
 
-Running `./install.sh` with no arguments **auto-detects** which AI tools are installed and shows an interactive menu:
-
-```
-Detected AI coding tools on this system:
-
-  [1] Claude Code   ✓ installed
-  [2] OpenCode + omo  ✓ installed
-  [3] Cursor IDE    (not found in PATH)
-  [4] OpenAI Codex CLI  (not found in PATH)
-
-Enter numbers to configure (e.g. '1', '1 2', '1,2').
-Press Enter to configure all detected tools.
-> 1 2
-```
-
-You can also pass platforms directly (skip the menu):
+Running with no args **auto-detects** Claude Code and Grok Build and shows a menu.
 
 ```bash
-./install.sh claude          # Claude Code only
-./install.sh opencode        # OpenCode + omo only
-./install.sh cursor          # Cursor IDE only
-./install.sh codex           # OpenAI Codex CLI only
-./install.sh claude opencode # multiple at once
-./install.sh deps            # install deps only, no config
-./install.sh all             # legacy: claude + opencode
+./install.sh claude    # Claude Code only
+./install.sh grok      # Grok Build only
+./install.sh all       # both
+./install.sh deps      # dependencies only
 ```
-
-Installer auto-installs all dependencies then copies config files:
 
 | Tool | Auto-installed? |
 |---|---|
@@ -288,27 +182,15 @@ Installer auto-installs all dependencies then copies config files:
 | uv (Python) | ✅ curl install |
 | dolt | ✅ curl install |
 | beads (`bd`) | ✅ curl install |
-| bv + mcp_agent_mail | ✅ curl install |
-| opencode | ✅ curl install (when opencode selected) |
-| omo | ✅ npx/bunx install (when opencode selected) |
-| mempalace | ⚠️ manual — no standard curl install yet |
+| grok CLI | ✅ curl install (when grok selected) |
+| mempalace | ⚠️ manual |
 | claude CLI | ⚠️ manual — https://claude.ai/download |
 
-Config files are never overwritten (skips existing — no destructive writes). Scripts are made executable automatically.
+**Safety:**
 
----
-
-## Migrating from Claude Code to OpenCode
-
-Coming from Claude Code? See **[MIGRATE_TO_OPENCODE.md](./MIGRATE_TO_OPENCODE.md)** for a step-by-step guide using [OpenPackage](https://github.com/enulus/OpenPackage).
-
-Quick start:
-
-```bash
-npm i -g opkg
-opkg add .claude/
-opkg install --platforms opencode
-```
+- `~/.claude/settings.json` is never overwritten if it already exists
+- `~/.grok/config.toml` is never overwritten (auth + sessions preserved)
+- `./install.sh grok` never wipes `~/.grok` (unlike Claude, which rebuilds `~/.claude` from source)
 
 ---
 
@@ -322,84 +204,30 @@ mkdir -p .claude .beads
 cp ~/.claude/CLAUDE_TEMPLATE_PROJECT.md CLAUDE.md
 touch .beads/PRIME.md
 bd init
-mempalace --palace ~/.mempalace/<project> init .
-claude mcp add mempalace -s local -- mempalace-mcp --palace ~/.mempalace/<project>
+mempalace --palace ~/.mempalace/projects/$(basename "$PWD") init . --yes --no-llm
 
-# Verify
-claude mcp list    # mempalace ✓ Connected
+claude mcp list    # mempalace ✓ (user-scope from install)
 bd status
 ```
 
-### OpenCode
+### Grok Build CLI
 
 ```bash
 cd ~/Projects/<org>/<project>
-
-# opencode.json and AGENTS.md are already in this repo root.
-# For other projects, copy them:
-cp /path/to/claude-config/opencode.json .
-cp /path/to/claude-config/AGENTS.md .
-
-# Init beads and mempalace (same as Claude Code)
-bd init
+mkdir -p .grok .beads
+cp ~/.grok/AGENTS_TEMPLATE_PROJECT.md AGENTS.md
 touch .beads/PRIME.md
-mempalace --palace ~/.mempalace/<project> init .
-
-# OPENCODE_PROJECT_SLUG is auto-derived — no manual export needed.
-# install.sh adds an opencode/claude shell wrapper that sets it from the
-# git root basename on each launch (block marked "oh-my-openagent slug" in
-# your fish/bash/zsh rc). OMO_SCRIPTS is set in the same block.
-# Override per-project only if you want a slug that differs from the repo name:
-#   set -x OPENCODE_PROJECT_SLUG "<custom>"   # fish
-#   export OPENCODE_PROJECT_SLUG="<custom>"   # bash/zsh
-
-# Verify
-opencode models                 # your configured provider/model listed
-opencode                        # /model → your chosen model; bd status works
-npx oh-my-openagent doctor      # no blocking errors
-```
-
-### Cursor
-
-```bash
-cd ~/Projects/<org>/<project>
-mkdir -p .cursor/rules .beads && touch .beads/PRIME.md
-
-# Copy the workflow rules template installed by ./install.sh cursor
-cp ~/.cursor/workflow-template.mdc .cursor/rules/workflow.mdc
-
 bd init
-mempalace --palace ~/.mempalace/<project> init .
+mempalace --palace ~/.mempalace/projects/$(basename "$PWD") init . --yes --no-llm
 
-# MCP config — create .cursor/mcp.json in the project:
-cat > .cursor/mcp.json << 'EOF'
-{
-  "mcpServers": {
-    "mempalace": {
-      "command": "mempalace-mcp",
-      "args": ["--palace", "~/.mempalace/<project>"]
-    }
-  }
-}
-EOF
-
-# Add to shell rc:
-export CURSOR_SCRIPTS="$HOME/.cursor/scripts"
+# Optional: both CLAUDE.md and AGENTS.md can coexist — Grok loads both.
+grok mcp list
+bd status
 ```
 
-> **Note:** Cursor global rules are configured in Settings → Rules for AI (not file-based). `.cursor/rules/` is project-level only.
-
-### Codex
-
-```bash
-cd ~/Projects/<org>/<project>
-cp ~/.codex/instructions.md AGENTS.md
-bd init && touch .beads/PRIME.md
-mempalace --palace ~/.mempalace/<project> init .
-
-# Add to shell rc:
-export CODEX_SCRIPTS="$HOME/.codex/scripts"
-```
+> **Note:** `./install.sh` registers mempalace MCP once per tool at **user scope**
+> via the `mempalace-project` wrapper. It auto-resolves to
+> `~/.mempalace/projects/<repo>` from the launch cwd.
 
 ---
 
@@ -413,13 +241,9 @@ New task
   └─ score-task.sh <id>            → SMALL / MEDIUM / LARGE
   └─ bd update <id> --claim
   └─ work
-  └─ Quality Gate (momus, Option A)  → 5-dimension review → PASS≥4/5 or FAIL
+  └─ Quality Gate (quality-gate agent)  → 5-dimension review → PASS≥4/5 or FAIL
        PASS → bd close <id> → checkpoint-write.sh <id>
-       FAIL → fix → retry (max 2x) → escalate to Option B if still failing
-  └─ Adversarial Verify (Option B, MEDIUM+)  → scripts/adversarial-verify.js
-       self-score (<6 → skip to retry) → 3 lenses: correctness/security/edge-cases
-       + completeness critic → accept if ≥2/3 pass + complete
-       fail → retry once → reopen task if still failing
+       FAIL → fix → retry (max 2x) → escalate to adversarial-verify if still failing
 
 Session end
   └─ session-end.sh → checkpoint-write + bd prime
@@ -429,196 +253,114 @@ Session end
 
 ## Examples
 
-### Fix a bug (SMALL task)
+### Fix a bug (SMALL task) — Claude
 
 ```bash
-# 1. Create task
 bd create "Fix login redirect loop on mobile" --json
 # → my-app-4xz
 
-# 2. Score + claim
-~/.config/opencode/scripts/score-task.sh my-app-4xz
-# → SMALL
-
+~/.claude/scripts/score-task.sh my-app-4xz
 bd update my-app-4xz --claim --json
 
-# 3. Open OpenCode and describe the fix
-opencode
+claude
 # prompt: "Fix login redirect loop on mobile. Task my-app-4xz claimed."
 
-# 4. Close + checkpoint
 bd close my-app-4xz "fixed: check for existing session before redirect" --json
-~/.config/opencode/scripts/checkpoint-write.sh my-app-4xz
+~/.claude/scripts/checkpoint-write.sh my-app-4xz
 ```
 
----
-
-### Build a feature (MEDIUM task — parallel agents)
+### Fix a bug (SMALL task) — Grok
 
 ```bash
-# 1. Intake
-bd create "Add dark mode toggle to settings page" --json
-# → my-app-7kp
+bd create "Fix login redirect loop on mobile" --json
+# → my-app-4xz
 
-# 2. Score → MEDIUM
-~/.config/opencode/scripts/score-task.sh my-app-7kp
+~/.grok/scripts/score-task.sh my-app-4xz
+bd update my-app-4xz --claim --json
 
-# 3. Decompose into epic + subtasks
-bd create "Dark mode epic" -t epic --json           # → my-app-8aa
-bd create "Add CSS variables for theme"  --parent my-app-8aa --json   # → my-app-8ab
-bd create "Build toggle component"       --parent my-app-8aa --json   # → my-app-8ac
-bd create "Persist preference to localStorage" --parent my-app-8aa --json  # → my-app-8ad
+grok
+# prompt: "Fix login redirect loop on mobile. Task my-app-4xz claimed."
 
-# 4. Open OpenCode — omo orchestrates subtasks in parallel via Team Mode
-opencode
-# prompt: "ultrawork — implement dark mode epic my-app-8aa.
-#          Subtasks: 8ab CSS vars, 8ac toggle component, 8ad localStorage.
-#          Each agent claims its subtask, closes it when done."
-
-# omo spins up 3 agents (visual-engineering category), each:
-#   bd update <subtask> --claim → implement → bd close <subtask>
-
-# 5. Orchestrator reviews, closes epic, checkpoints
-bd close my-app-8aa "dark mode complete" --json
-~/.config/opencode/scripts/checkpoint-write.sh my-app-8aa
+bd close my-app-4xz "fixed: check for existing session before redirect" --json
+~/.grok/scripts/checkpoint-write.sh my-app-4xz
 ```
-
----
 
 ### Jira ticket intake
 
 ```bash
-# Paste a Jira URL or key — script finds or creates bead automatically
-BD_ID=$(~/.config/opencode/scripts/jira-to-bd.sh WLB-2046)
-echo $BD_ID   # → my-app-9zx
-
-~/.config/opencode/scripts/score-task.sh $BD_ID
-# → MEDIUM
-
+# Claude paths shown; use ~/.grok/scripts/ for Grok
+BD_ID=$(~/.claude/scripts/jira-to-bd.sh WLB-2046)
+~/.claude/scripts/score-task.sh $BD_ID
 bd update $BD_ID --claim --json
-opencode
-# prompt: "Work on WLB-2046 ($BD_ID) — <paste ticket description>"
+claude   # or: grok
 ```
 
----
-
-### Session recovery after context clear
+### Session recovery
 
 ```bash
-# Before clearing
-~/.config/opencode/scripts/checkpoint-write.sh <current-task-id>
-
-# After /clear or new session
-~/.config/opencode/scripts/session-start.sh
-# Output: last checkpoint keys + ready tasks
-
-# Reload memory in OpenCode
-opencode
-# prompt: "Resume work. session-start output: <paste output>"
+~/.claude/scripts/checkpoint-write.sh <current-task-id>   # or ~/.grok/scripts/
+# After /clear or new session:
+~/.claude/scripts/session-start.sh
+claude   # or: grok — "Resume work. session-start output: <paste>"
 ```
 
 ---
 
-### Code review via omo
+## Hooks
+
+### Claude Code
+
+Wired in `settings.json`:
+
+| Event | Hook | Purpose |
+| ----- | ---- | ------- |
+| `SessionStart` | `caveman-activate.js` + `session-start.sh` | Mode + checkpoint reload |
+| `UserPromptSubmit` | `mempalace-prompt-hook.js` | Inject memory |
+| `PreToolUse` (Edit/Write) | `guard-claim.sh` | Block edits without claim |
+| `PostToolUse` (Edit/Write) | `verify-edit.sh` | Post-edit lint (async) |
+| `Stop` | `session-end.sh` | Checkpoint write |
+
+> **Provider routing:** repo `settings.json` is minimal (hooks + plugins only).
+> Copy `model` + `env` from `settings.example.jsonc` for MiniMax / custom endpoints.
+
+### Grok Build CLI
+
+Wired in `~/.grok/hooks/workflow.json` (always trusted — user-global):
+
+| Event | Hook | Purpose |
+| ----- | ---- | ------- |
+| `SessionStart` | `session-start.sh` | Checkpoint reload |
+| `PreToolUse` (edit tools) | `guard-claim.sh` | Block edits without claim |
+| `PostToolUse` (edit tools) | `verify-edit.sh` | Post-edit lint |
+| `SessionEnd` / `Stop` | `session-end.sh` | Checkpoint write |
+
+Grok maps Claude tool names in matchers (`Edit`/`Write` → `search_replace`). Optional UI/model settings: merge from `config.example.toml` into `~/.grok/config.toml`.
+
+---
+
+## Plugins
+
+### Claude Code
+
+| Plugin | Marketplace | Purpose |
+| ------ | ----------- | ------- |
+| `caveman` | `JuliusBrussee/caveman` | Compressed communication |
+| `beads` | `gastownhall/beads` | Task + checkpoint workflow |
+| `superpowers` | `claude-plugins-official` | Skill bundle |
+| `context7` | `claude-plugins-official` | Live docs |
+| `code-simplifier` | `claude-plugins-official` | Diff simplification |
+| `skill-creator` | `claude-plugins-official` | Author skills |
+
+### Grok Build CLI
+
+`./install.sh grok` best-effort installs:
 
 ```bash
-# After finishing a feature branch
-opencode
-# prompt: "Review the diff on branch feat/dark-mode.
-#          Use momus agent or hyperplan skill.
-#          Output findings as file:line — issue — fix."
-
-# For deeper audit, use Claude Code:
-claude
-# /code-review high
+grok plugin install gastownhall/beads#plugins/beads --trust
+grok plugin install JuliusBrussee/caveman#plugins/caveman --trust
 ```
 
----
-
-### Scale up: 15+ agents (ultracode fan-out)
-
-```bash
-# omo caps at 3–4 concurrent agents per provider rate limits.
-# For large fan-outs, switch to Claude Code ultracode:
-claude
-# /ultrareview  (or prompt with ultrawork)
-```
-
----
-
-## Hooks (Claude Code)
-
-Wired in `settings.json`. Order within a single event matters — earlier hooks run
-first.
-
-| Event                            | Hook command                                              | Purpose                                          |
-| -------------------------------- | --------------------------------------------------------- | ------------------------------------------------ |
-| `SessionStart`                   | `hooks/caveman-activate.js`                               | Caveman mode badge + system prompt activation    |
-| `SessionStart`                   | `scripts/session-start.sh`                                | Reload last bd checkpoint + ready tasks (async)  |
-| `SessionStart`                   | `hooks/agent_mail_register.sh`                            | Register agent identity with mcp-agent-mail (async) |
-| `UserPromptSubmit`               | `hooks/mempalace-prompt-hook.js`                          | Inject relevant mempalace memory                 |
-| `PreToolUse: Edit\|Write\|MultiEdit` | `scripts/guard-claim.sh`                              | Block edits when no bd task is claimed           |
-| `PreToolUse: Edit`               | `mcp_agent_mail … file_reservations soon`                 | Warn on stale file reservations (async, 5 s)     |
-| `PostToolUse: Edit\|Write\|MultiEdit` | `scripts/verify-edit.sh`                             | Post-edit verification / typecheck (async)       |
-| `PostToolUse: Bash`              | `hooks/check_inbox.sh`                                    | Poll mcp-agent-mail inbox (async, 120 s rate limit) |
-| `Stop`                           | `scripts/session-end.sh` (nohup)                          | Checkpoint write + bd prime in background        |
-
-> **Provider routing:** The repo's `settings.json` is a **MINIMAL default**
-> (hooks + plugins + theme only — no `model` or `env`). It does **NOT** force
-> any provider. `./install.sh claude` preserves any existing
-> `~/.claude/settings.json` and will not overwrite your personal model /
-> provider config.
->
-> To route Claude Code through a custom endpoint (minimax / MiniMax / your
-> own proxy), copy the `model` + `env` blocks from
-> **`settings.example.jsonc`** into your `~/.claude/settings.json`. The
-> example file shows the full reference template with comments — including
-> the MiniMax M3 setup. To use real Anthropic Claude instead, just don't add
-> any provider env vars; Claude Code falls back to defaults.
-
-## Hooks (OpenCode — via workflow-hooks.ts plugin)
-
-`.opencode/plugins/workflow-hooks.ts` is a native OpenCode plugin that automates session lifecycle. No manual wiring needed — it runs as long as `opencode.json` lists `"./.opencode/plugins/workflow-hooks"` in the `plugin` array.
-
-| OpenCode event | Action |
-| -------------- | ------ |
-| `session.created` | `session-start.sh` (checkpoint reload) + `agent_mail_register.sh` |
-| `session.deleted` | `session-end.sh` (checkpoint write) |
-| `session.idle` | `check_inbox.sh` (rate-limited: 120 s) |
-
-System prompt injection (caveman terse mode + bd workflow rules) is done via `experimental.chat.system.transform`.
-
-Remaining gaps (not yet automated in OpenCode):
-
-| Claude Code hook | OpenCode status |
-| ---------------- | --------------- |
-| `UserPromptSubmit: mempalace-prompt-hook.js` | Not needed — AGENTS.md instructs `mempalace_search` explicitly |
-| `PreToolUse: Edit → file_reservations` | Not yet portable — gap accepted |
-
----
-
-## Plugins (Claude Code)
-
-| Plugin            | Marketplace                  | Purpose                                  |
-| ----------------- | ---------------------------- | ---------------------------------------- |
-| `caveman`         | `JuliusBrussee/caveman`      | Compressed AI communication mode         |
-| `beads`           | `gastownhall/beads`          | Task management + checkpoint workflow    |
-| `superpowers`     | `claude-plugins-official`    | Skill bundle (brainstorming, TDD, etc.)  |
-| `context7`        | `claude-plugins-official`    | Live library / framework documentation   |
-| `code-simplifier` | `claude-plugins-official`    | Diff-based simplification helper         |
-| `skill-creator`   | `claude-plugins-official`    | Author and benchmark Claude Code skills  |
-
-```bash
-claude plugin install caveman@caveman
-claude plugin install beads@beads-marketplace
-claude plugin install superpowers@claude-plugins-official
-claude plugin install context7@claude-plugins-official
-claude plugin install code-simplifier@claude-plugins-official
-claude plugin install skill-creator@claude-plugins-official
-```
-
-> `./install.sh claude` installs all of the above and keeps them in sync with
-> `enabledPlugins` in `settings.json`.
+Failures are non-fatal (plugin layout may change). Manage via `/plugins` in the TUI.
 
 ---
 
@@ -627,116 +369,62 @@ claude plugin install skill-creator@claude-plugins-official
 ### Claude Code
 
 ```bash
-claude mcp list                      # mempalace ✓ Connected
-~/.claude/scripts/session-start.sh  # runs without errors
+claude mcp list
+~/.claude/scripts/session-start.sh
 bd status
-which bd bv mempalace jq
 ```
 
-### OpenCode
+### Grok Build CLI
 
 ```bash
-opencode models                      # your configured provider/model listed
-opencode                             # /model → your chosen model
-bd status                            # beads working
-npx oh-my-openagent doctor           # no blocking errors
-```
-
-### Cursor
-
-```bash
-ls ~/.cursor/scripts/                # scripts installed
-ls ~/.cursor/workflow-template.mdc   # rules template present
-bd status                            # beads working
-```
-
-### Codex
-
-```bash
-ls ~/.codex/scripts/                 # scripts installed
-cat ~/.codex/instructions.md        # instructions present
-bd status                            # beads working
+grok --version
+grok mcp list
+ls ~/.grok/scripts ~/.grok/agents ~/.grok/hooks/workflow.json
+~/.grok/scripts/session-start.sh
+bd status
 ```
 
 ---
 
 ## Troubleshooting
 
-**mempalace failing to connect:**
+**mempalace failing (Claude):**
 
 ```bash
-mempalace-mcp --help
-claude mcp remove mempalace -s local
-claude mcp add mempalace -- mempalace-mcp
+claude mcp remove mempalace -s user
+claude mcp add mempalace -s user -- "$HOME/.local/bin/mempalace-project"
+```
+
+**mempalace failing (Grok):**
+
+```bash
+grok mcp remove mempalace --scope user
+grok mcp add mempalace -- "$HOME/.local/bin/mempalace-project"
+grok mcp doctor mempalace
 ```
 
 **mempalace "No palace found":**
 
 ```bash
-mempalace --palace ~/.mempalace/<project> init .
+mempalace --palace ~/.mempalace/projects/$(basename "$PWD") init . --yes --no-llm
 ```
 
 **Scripts not executable:**
 
 ```bash
 chmod +x ~/.claude/scripts/*.sh
-chmod +x ~/.config/opencode/scripts/*.sh
-chmod +x ~/.cursor/scripts/*.sh
-chmod +x ~/.codex/scripts/*.sh
-```
-
-**Cursor rules not applying:**
-
-```bash
-# Cursor reads project-level rules from .cursor/rules/*.mdc only
-# Global rules go in Cursor → Settings → Rules for AI (not a file path)
-ls .cursor/rules/    # should contain workflow.mdc
-# Ensure alwaysApply: true in the .mdc frontmatter, or enable the rule in Cursor UI
-```
-
-**Codex not finding AGENTS.md:**
-
-```bash
-# Codex looks for AGENTS.md in the project root
-ls AGENTS.md         # must exist
-# If missing: cp ~/.codex/instructions.md AGENTS.md
-```
-
-**bd kv empty after /clear:**
-
-```bash
-bd kv list    # check for checkpoint:* keys
-# If empty → paste new ticket, Claude creates tasks from scratch
+chmod +x ~/.grok/scripts/*.sh
 ```
 
 **guard-claim.sh blocking all edits:**
 
 ```bash
-bd update <id> --claim   # claim a task first
+bd update <id> --claim
 ```
 
-**Model not found:**
+**Grok hooks not running:**
 
 ```bash
-opencode models           # list all available models for your configured provider
-opencode providers        # re-run auth if provider missing
-```
-
-**omo TUI sidebar missing / `oh-my-openagent/tui` resolution error:**
-
-```bash
-# omo v4.7.x does not export a "./tui" subpath. The plugin must be
-# registered as a regular server plugin in opencode.jsonc, not via tui.json.
-ls ~/.config/opencode/opencode.jsonc   # should contain "oh-my-openagent@latest"
-ls ~/.config/opencode/node_modules/oh-my-openagent  # should exist
-npx oh-my-openagent doctor
-# If ~/.config/opencode/tui.json still references "oh-my-openagent/tui",
-# quarantine it: mv ~/.config/opencode/tui.json{,.bak-$(date +%s)}
-```
-
-**Concurrency throttled by provider:**
-
-```bash
-# Lower background_task.providerConcurrency in oh-my-openagent.json
-# For 15+ agent fan-outs: use Claude Code ultracode instead
+ls ~/.grok/hooks/workflow.json
+# Global hooks are always trusted; project hooks need /hooks-trust
 ```

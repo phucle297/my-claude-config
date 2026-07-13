@@ -1,0 +1,67 @@
+# =============================================================================
+# config.example.toml — REFERENCE TEMPLATE for ~/.grok/config.toml
+# =============================================================================
+# Companion to settings.example.jsonc (Claude Code).
+#
+# Grok Build CLI only reads ~/.grok/config.toml (and project .grok/config.toml
+# for MCP / permissions). This file is NOT installed automatically.
+#
+# Usage:
+#   1. Open your personal config:
+#        $EDITOR ~/.grok/config.toml
+#   2. Copy any section you want (models, UI, MCP, features).
+#   3. Restart Grok (or open a new session).
+#
+# ./install.sh grok never overwrites an existing ~/.grok/config.toml.
+# Workflow hooks live in ~/.grok/hooks/workflow.json (installed by the
+# installer). MCP mempalace is registered via `grok mcp add` (user scope).
+#
+# See README.md → "Grok Build CLI" for per-project setup and verify steps.
+# =============================================================================
+
+[cli]
+auto_update = true
+
+[models]
+default = "grok-build"
+# web_search = "grok-4.20-multi-agent"
+
+[ui]
+# Permission prompt default on the first approval of a session
+default_selected_permission = "always_allow_all_sessions"
+show_thinking_blocks = true
+group_tool_verbs = true
+# screen_mode = "fullscreen"   # or "minimal"
+
+[features]
+telemetry = false
+codebase_indexing = true
+
+[session]
+auto_compact_threshold_percent = 85
+
+[subagents]
+enabled = true
+
+# Example: route explore to a lighter model
+# [subagents.models]
+# explore = "grok-build"
+
+# ---------------------------------------------------------------------------
+# MCP servers — prefer `grok mcp add` for registration so secrets stay out of
+# git. The installer adds mempalace via the per-project wrapper:
+#
+#   grok mcp add mempalace -- ~/.local/bin/mempalace-project
+#
+# Equivalent manual entry:
+# ---------------------------------------------------------------------------
+# [mcp_servers.mempalace]
+# command = "/home/YOU/.local/bin/mempalace-project"
+# enabled = true
+# startup_timeout_sec = 30
+
+# ---------------------------------------------------------------------------
+# Optional: extra skill directories
+# ---------------------------------------------------------------------------
+# [skills]
+# paths = ["~/my-team-skills"]

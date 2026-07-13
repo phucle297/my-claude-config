@@ -61,7 +61,7 @@ install_claude_md() {
 install_claude_plugins() {
   if ! has claude; then
     warn "claude CLI not found — skipping plugin install."
-    warn "Install Claude Code from https://claude.ai/download then re-run: ./install.sh claude"
+    warn "Install Claude Code from https://claude.ai/download then re-run: ./install.sh"
     return
   fi
   step "Installing Claude marketplaces..."
@@ -111,9 +111,6 @@ install_claude_mempalace() {
 print_claude_next_steps() {
   echo ""
   echo "=== Claude Code setup done ==="
-  echo ""
-  echo "Start mcp-agent-mail server (required for inbox hooks):"
-  echo "  cd ~/.local/share/mcp_agent_mail && uv run python -m mcp_agent_mail.server &"
   echo ""
   echo "mempalace is registered ONCE (user scope) and auto-resolves to a"
   echo "per-project palace from the repo cwd: ~/.mempalace/projects/<repo>"

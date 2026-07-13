@@ -1,20 +1,31 @@
 #!/bin/bash
 set -uo pipefail
-# verify-edit.sh — PostToolUse hook for Edit|Write|MultiEdit.
+# verify-edit.sh — PostToolUse hook for file edits (Claude + Grok).
 # Auto-detects project type, runs only eslint (no typecheck), prints ONLY on
 # error. Never blocks the workflow: always exits 0. Warning, not gate.
 #
 # Reads the hook JSON on stdin and extracts the edited file path.
+# Claude: tool_input.file_path / Grok: toolInput.file_path (or path/target_file).
 
 # --- parse edited file path from hook stdin JSON ---
 INPUT="$(cat 2>/dev/null || true)"
 FILE=""
 if command -v jq >/dev/null 2>&1; then
-  FILE="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.filePath // empty' 2>/dev/null)"
+  FILE="$(printf '%s' "$INPUT" | jq -r '
+    .tool_input.file_path
+    // .tool_input.filePath
+    // .tool_input.path
+    // .tool_input.target_file
+    // .toolInput.file_path
+    // .toolInput.filePath
+    // .toolInput.path
+    // .toolInput.target_file
+    // empty
+  ' 2>/dev/null)"
 fi
 # Fallback: grep the first file_path-looking field.
 if [ -z "$FILE" ]; then
-  FILE="$(printf '%s' "$INPUT" | grep -oE '"file_?[Pp]ath"[[:space:]]*:[[:space:]]*"[^"]+"' | head -1 | sed -E 's/.*"([^"]+)"$/\1/')"
+  FILE="$(printf '%s' "$INPUT" | grep -oE '"(file_?[Pp]ath|path|target_file)"[[:space:]]*:[[:space:]]*"[^"]+"' | head -1 | sed -E 's/.*"([^"]+)"$/\1/')"
 fi
 
 [ -z "$FILE" ] && exit 0

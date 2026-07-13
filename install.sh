@@ -3,17 +3,13 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Shared infra: logging, OS detection, pkg_install, generic dependency
-# installers, file helpers, per-tool dir vars.
+# Shared infra: logging, OS detection, pkg_install, dependency installers,
+# file helpers, per-tool dir vars.
 source "$SCRIPT_DIR/lib/common.sh"
 
-# Per-tool install modules. Each defines its config helpers + an
-# install_<tool>() orchestrator. Split out so each tool's logic lives in
-# its own file; this entry point only does deps, dispatch, and the menu.
+# Per-tool install modules.
 source "$SCRIPT_DIR/install/claude.sh"
-source "$SCRIPT_DIR/install/opencode.sh"
-source "$SCRIPT_DIR/install/cursor.sh"
-source "$SCRIPT_DIR/install/codex.sh"
+source "$SCRIPT_DIR/install/grok.sh"
 
 # ---------------------------------------------------------------------------
 # Platform dispatch
@@ -21,13 +17,11 @@ source "$SCRIPT_DIR/install/codex.sh"
 
 install_platform() {
   case "$1" in
-    claude)   install_claude   ;;
-    opencode) install_opencode ;;
-    cursor)   install_cursor   ;;
-    codex)    install_codex    ;;
+    claude) install_claude ;;
+    grok)   install_grok   ;;
     *)
       error "Unknown platform: $1"
-      echo "Valid: claude | opencode | cursor | codex" >&2
+      echo "Valid: claude | grok" >&2
       exit 1
       ;;
   esac
@@ -37,19 +31,15 @@ install_platform() {
 # Interactive detection + multi-select
 # ---------------------------------------------------------------------------
 
-# Populates SELECTED_PLATFORMS array via interactive menu.
-# Sets global SELECTED_PLATFORMS.
 SELECTED_PLATFORMS=()
 
 interactive_select() {
-  local -a tools=("claude" "opencode" "cursor" "codex")
-  local -a labels=("Claude Code" "OpenCode + omo" "Cursor IDE" "OpenAI Codex CLI")
-  local -a detected=(false false false false)
+  local -a tools=("claude" "grok")
+  local -a labels=("Claude Code" "Grok Build CLI")
+  local -a detected=(false false)
 
-  has claude   && detected[0]=true
-  has opencode && detected[1]=true
-  has cursor   && detected[2]=true
-  has codex    && detected[3]=true
+  has claude && detected[0]=true
+  has grok   && detected[1]=true
 
   echo "Detected AI coding tools on this system:"
   echo ""
@@ -76,8 +66,8 @@ interactive_select() {
       ${detected[$i]} && SELECTED_PLATFORMS+=("${tools[$i]}")
     done
     if [ ${#SELECTED_PLATFORMS[@]} -eq 0 ]; then
-      warn "No tools detected in PATH. Defaulting to Claude Code."
-      SELECTED_PLATFORMS=("claude")
+      warn "No tools detected in PATH. Defaulting to Claude Code + Grok."
+      SELECTED_PLATFORMS=("claude" "grok")
     fi
   else
     local num idx
@@ -118,37 +108,46 @@ main() {
       echo "---"
       install_platform "$platform"
     done
+    return
+  fi
 
-  else
-    case "$1" in
-      deps)
-        echo "=== Installing all dependencies ==="
-        install_all_deps
-        return
-        ;;
-      all)
-        # Legacy shorthand — install claude + opencode
-        echo "=== Full Config Installer (Claude Code + OpenCode) ==="
-        echo ""
-        install_all_deps
-        ensure_opencode
-        install_platform claude
-        echo ""
-        echo "---"
-        install_platform opencode
-        return
-        ;;
-    esac
-
-    # One or more explicit platforms: ./install.sh claude opencode
-    install_all_deps
-    local platform
-    for platform in "$@"; do
+  case "$1" in
+    deps)
+      echo "=== Installing all dependencies ==="
+      install_all_deps
+      return
+      ;;
+    all)
+      echo "=== Full Config Installer (Claude Code + Grok Build) ==="
+      echo ""
+      install_all_deps
+      ensure_grok
+      install_platform claude
       echo ""
       echo "---"
-      install_platform "$platform"
-    done
-  fi
+      install_platform grok
+      return
+      ;;
+    -h|--help|help)
+      echo "Usage: ./install.sh [deps|claude|grok|all]"
+      echo ""
+      echo "  (no args)  Interactive menu — detect + pick tools"
+      echo "  claude     Claude Code config only"
+      echo "  grok       Grok Build CLI config only"
+      echo "  all        Claude Code + Grok Build"
+      echo "  deps       Dependencies only"
+      return
+      ;;
+  esac
+
+  # One or more explicit platforms: ./install.sh claude grok
+  install_all_deps
+  local platform
+  for platform in "$@"; do
+    echo ""
+    echo "---"
+    install_platform "$platform"
+  done
 }
 
 main "$@"

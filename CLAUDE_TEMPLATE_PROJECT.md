@@ -13,6 +13,19 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 > source of truth; don't `bd import` during normal operation; don't
 > reach for third-party Dolt hosting before trying the default).
 
+## Supported tools
+
+This template works for **Claude Code** (`CLAUDE.md`) and **Grok Build CLI**
+(`AGENTS.md`). Grok also loads `CLAUDE.md` when present — both files can
+coexist.
+
+Workflow scripts (use the path for your tool):
+
+| Tool | Scripts |
+|------|---------|
+| Claude Code | `~/.claude/scripts/` |
+| Grok Build | `~/.grok/scripts/` |
+
 ## Quick Reference
 
 ```bash
@@ -79,7 +92,12 @@ bd close <id>         # Complete work
 
 ## Quality Gate (run before every `bd close`)
 
-Spawn subagent via Task tool:
+Spawn the `quality-gate` subagent:
+
+- **Claude Code** — Task / agent team with `quality-gate`
+- **Grok Build** — `spawn_subagent` with `subagent_type: quality-gate` (or agent name)
+
+Prompt:
 
 ```
 Review task <id> output: <what was done>.
@@ -95,7 +113,7 @@ If FAIL: list findings as "file:line — issue — fix".
 Default FAIL if uncertain on any P0/P1 dimension.
 ```
 
-- PASS (≥4/5) → `bd close <id>` + `checkpoint-write.sh <id>`
-- FAIL → fix → re-run (max 2 attempts) → escalate to `scripts/adversarial-verify.js` if still failing
+- PASS (≥4/5) → `bd close <id>` + `checkpoint-write.sh <id>` (from your tool's scripts dir)
+- FAIL → fix → re-run (max 2 attempts) → escalate to `adversarial-verify.js` if still failing
 - Skip only for docs-only or config-only tasks
 <!-- END BEADS INTEGRATION -->

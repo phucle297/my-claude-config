@@ -1,7 +1,7 @@
 #!/bin/bash
 # worktree-task.sh <name> [JIRA-KEY] [base-ref]
 # Create a git worktree + a beads epic named after that worktree, so parallel
-# worktrees (e.g. claude-code vs opencode on the same task) share ONE beads DB
+# worktrees (e.g. two Claude Code sessions on the same task) share ONE beads DB
 # but every worktree's tasks are grouped under its own epic and attributed to
 # its own actor.
 #
@@ -20,7 +20,7 @@
 #   ~/.claude/scripts/worktree-task.sh WLB-2223-oc-m3 WLB-2223
 #
 # Then, in the new worktree, before launching the agent:
-#   source .beads-worktree.env && claude     # or: opencode
+#   source .beads-worktree.env && claude   # or: grok
 # That exports BEADS_ACTOR (per-worktree attribution) and BD_WORKTREE_EPIC,
 # which jira-to-bd.sh reads to auto-nest new beads under this worktree's epic.
 
@@ -92,5 +92,5 @@ fi
 echo "worktree: $WT_PATH (branch $NAME)" >&2
 echo "epic:     $EPIC_ID  (label worktree:$NAME)" >&2
 echo "actor:    $NAME" >&2
-echo "next:     cd \"$WT_PATH\" && source .beads-worktree.env && claude   # or opencode" >&2
+echo "next:     cd \"$WT_PATH\" && source .beads-worktree.env && claude   # or: grok" >&2
 echo "$EPIC_ID"

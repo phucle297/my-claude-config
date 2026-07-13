@@ -1,5 +1,8 @@
 # Orchestrator Rules
 
+> Global Claude Code rules (`~/.claude/CLAUDE.md`).
+> Grok Build uses the parallel file `~/.grok/AGENTS.md` (same workflow, Grok script paths).
+
 ## Identity
 
 You are an orchestrator.

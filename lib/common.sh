@@ -4,7 +4,7 @@
 # generic dependency installers, file helpers, and per-tool dir vars.
 #
 # Requires $SCRIPT_DIR (repo root) to be set by the sourcing script before
-# any of the install_scripts_to / agent-sync helpers are CALLED.
+# any of the install_scripts_to helpers are CALLED.
 
 # Source-guard: safe to source more than once.
 [[ -n "${_COMMON_SH_LOADED:-}" ]] && return 0
@@ -15,9 +15,7 @@ _COMMON_SH_LOADED=1
 # ---------------------------------------------------------------------------
 
 CLAUDE_DIR="$HOME/.claude"
-OPENCODE_DIR="$HOME/.config/opencode"
-CURSOR_DIR="$HOME/.cursor"
-CODEX_DIR="$HOME/.codex"
+GROK_DIR="$HOME/.grok"
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -63,8 +61,6 @@ pkg_install() {
 
 # ---------------------------------------------------------------------------
 # Generic dependency auto-installers
-# (tool-specific installers — ensure_opencode, ensure_omo — live in
-#  install/opencode.sh)
 # ---------------------------------------------------------------------------
 
 ensure_jq() {
@@ -123,17 +119,6 @@ ensure_beads() {
   has bd && info "bd installed" || warn "bd not in PATH — restart shell"
 }
 
-ensure_bv_mcp() {
-  has bv && { info "bv already installed"; return; }
-  step "Installing bv + mcp_agent_mail..."
-  ensure_curl
-  ensure_uv
-  curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/mcp_agent_mail/main/scripts/install.sh?$(date +%s)" \
-    | bash -s -- --yes --skip-beads 2>/dev/null || \
-    warn "bv/mcp_agent_mail install failed — install manually (see README)"
-  has bv && info "bv installed" || warn "bv not found after install"
-}
-
 ensure_mempalace() {
   has mempalace && { info "mempalace already installed"; return; }
   warn "mempalace not found. Install manually: https://github.com/mempalace/mempalace"
@@ -148,7 +133,6 @@ install_all_deps() {
   ensure_uv
   ensure_dolt
   ensure_beads
-  ensure_bv_mcp
   ensure_mempalace
 }
 
@@ -156,9 +140,11 @@ install_all_deps() {
 # File helpers
 # ---------------------------------------------------------------------------
 
-# Move a tracked top-level config dir (e.g. ~/.claude, ~/.config/opencode,
-# ~/.cursor, ~/.codex) aside as <dir>.bak-<ts> so we can rebuild it fresh
-# from source. Avoids littering the parent with per-file .bak-N copies.
+# Move a tracked top-level config dir (e.g. ~/.claude) aside as <dir>.bak-<ts>
+# so we can rebuild it fresh from source. Avoids littering the parent with
+# per-file .bak-N copies.
+#
+# NEVER use this on ~/.grok — it holds auth.json, sessions, and bundled tools.
 backup_tracked_dir() {
   local dst="$1"
   [ -d "$dst" ] || return 0
@@ -166,10 +152,10 @@ backup_tracked_dir() {
   mv "$dst" "$bak" && info "Backed up $dst → $bak"
 }
 
-# Install the per-project mempalace launcher to ~/.local/bin (which is on
-# PATH for both Claude and Codex MCP spawns). Idempotent. Referenced by the
-# Claude + Codex mempalace MCP registrations so one registration yields a
-# per-project palace (the wrapper derives it from the launch cwd).
+# Install the per-project mempalace launcher to ~/.local/bin (on PATH for
+# Claude Code and Grok Build MCP spawns). Idempotent. Referenced by both
+# mempalace MCP registrations so one wrapper yields a per-project palace
+# (derived from the launch cwd).
 install_mempalace_wrapper() {
   local src="$SCRIPT_DIR/bin/mempalace-project"
   local dst="$HOME/.local/bin/mempalace-project"
