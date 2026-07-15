@@ -140,16 +140,46 @@ install_all_deps() {
 # File helpers
 # ---------------------------------------------------------------------------
 
-# Move a tracked top-level config dir (e.g. ~/.claude) aside as <dir>.bak-<ts>
-# so we can rebuild it fresh from source. Avoids littering the parent with
-# per-file .bak-N copies.
+# Move a tracked top-level config dir (e.g. ~/.claude or ~/.grok) aside as
+# <dir>.bak-<ts> so we can rebuild it fresh from source. Avoids littering
+# the parent with per-file .bak-N copies.
 #
-# NEVER use this on ~/.grok — it holds auth.json, sessions, and bundled tools.
+# Prints the backup path on stdout when a backup is created (empty if the
+# dir did not exist). Callers that need secrets (auth.json, provider env)
+# should restore them from that path after recreating the dir.
+#
+# Usage:
+#   bak="$(backup_tracked_dir "$CLAUDE_DIR")"
+#   # ... recreate dir + install ...
+#   # restore selected files from "$bak" if needed
 backup_tracked_dir() {
   local dst="$1"
   [ -d "$dst" ] || return 0
   local bak="${dst}.bak-$(date +%Y%m%d%H%M%S)"
-  mv "$dst" "$bak" && info "Backed up $dst → $bak"
+  if mv "$dst" "$bak"; then
+    info "Backed up $dst → $bak" >&2
+    printf '%s\n' "$bak"
+  else
+    error "Failed to back up $dst" >&2
+    return 1
+  fi
+}
+
+# Copy selected files/dirs from a backup into a freshly created config dir.
+# Missing sources are skipped (not an error).
+restore_from_bak() {
+  local bak="$1"
+  local dst="$2"
+  shift 2
+  [ -n "$bak" ] && [ -d "$bak" ] && [ -d "$dst" ] || return 0
+  local item
+  for item in "$@"; do
+    if [ -e "$bak/$item" ]; then
+      cp -a "$bak/$item" "$dst/" \
+        && info "Restored $item from backup" \
+        || warn "Failed to restore $item from $bak"
+    fi
+  done
 }
 
 # Install the per-project mempalace launcher to ~/.local/bin (on PATH for

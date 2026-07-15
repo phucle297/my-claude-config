@@ -73,6 +73,7 @@ install_claude_plugins() {
   claude plugin marketplace add JuliusBrussee/caveman              2>/dev/null || warn "caveman marketplace add failed"
   claude plugin marketplace add gastownhall/beads                  2>/dev/null || warn "beads marketplace add failed"
   claude plugin marketplace add anthropics/claude-plugins-official 2>/dev/null || warn "official marketplace add failed"
+  claude plugin marketplace add DietrichGebert/ponytail            2>/dev/null || warn "ponytail marketplace add failed"
 
   step "Installing Claude plugins..."
   # Order must match enabledPlugins in settings.json.
@@ -82,6 +83,7 @@ install_claude_plugins() {
   claude plugin install context7@claude-plugins-official        || warn "context7 install failed"
   claude plugin install code-simplifier@claude-plugins-official || warn "code-simplifier install failed"
   claude plugin install skill-creator@claude-plugins-official   || warn "skill-creator install failed"
+  claude plugin install ponytail@ponytail                       || warn "ponytail install failed"
   info "Claude plugins installed"
 }
 
@@ -128,9 +130,12 @@ print_claude_next_steps() {
 }
 
 # Full Claude Code install cycle.
+# If ~/.claude already exists: move it to ~/.claude.bak-<ts>, then rebuild.
+# Restores settings.json from the bak when present so provider/env keys survive.
 install_claude() {
   step "Configuring Claude Code..."
-  backup_tracked_dir "$CLAUDE_DIR"
+  local bak=""
+  bak="$(backup_tracked_dir "$CLAUDE_DIR" || true)"
   setup_claude_dirs
   install_claude_md
   install_claude_scripts
@@ -138,7 +143,41 @@ install_claude() {
   install_skills
   install_hooks
   install_settings
+  # Prefer the user's previous settings (API keys / provider routing) over the
+  # minimal repo default when a backup exists.
+  if [ -n "$bak" ] && [ -f "$bak/settings.json" ]; then
+    cp -f "$bak/settings.json" "$CLAUDE_DIR/settings.json" \
+      && info "Restored settings.json from backup (provider/env preserved)"
+  fi
+  restore_from_bak "$bak" "$CLAUDE_DIR" history.jsonl
+  ensure_claude_ponytail_settings
   install_claude_plugins
   install_claude_mempalace
   print_claude_next_steps
+}
+
+# After restoring a bak settings.json, pin ponytail marketplace + enable flag
+# without clobbering the user's other plugins/provider env.
+ensure_claude_ponytail_settings() {
+  local settings="$CLAUDE_DIR/settings.json"
+  [ -f "$settings" ] || return 0
+  if ! has jq; then
+    warn "jq not found — cannot merge ponytail into settings.json"
+    return 0
+  fi
+  local tmp
+  tmp="$(mktemp)"
+  if jq '
+    .enabledPlugins = (.enabledPlugins // {})
+    | .enabledPlugins["ponytail@ponytail"] = true
+    | .extraKnownMarketplaces = (.extraKnownMarketplaces // {})
+    | .extraKnownMarketplaces.ponytail = {
+        "source": { "source": "github", "repo": "DietrichGebert/ponytail" }
+      }
+  ' "$settings" >"$tmp" && mv -f "$tmp" "$settings"; then
+    info "Ensured ponytail is enabled in settings.json"
+  else
+    rm -f "$tmp"
+    warn "Failed to merge ponytail into settings.json"
+  fi
 }

@@ -2,5 +2,3 @@
 mempalace.yaml
 entities.json
 
-# Runtime agent-mail / cognit inbox (never commit)
-.cognit/

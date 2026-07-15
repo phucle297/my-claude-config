@@ -2,8 +2,10 @@
 # Grok Build CLI config install module. Sourced by install.sh.
 # Depends on lib/common.sh (logging, has, $GROK_DIR, $SCRIPT_DIR, helpers).
 #
-# Never backs up or wipes ~/.grok — auth.json, sessions, and bundled tools
-# live there. Only additive copies into scripts/agents/hooks/skills + AGENTS.md.
+# If ~/.grok exists it is moved to ~/.grok.bak-<ts>, then a fresh tree is
+# created. Runtime secrets/state are restored from the bak (auth.json,
+# config.toml, sessions, worktrees, etc.). Workflow files (AGENTS.md,
+# scripts/, agents/, hooks/, skills/) are always reinstalled from this repo.
 
 ensure_grok() {
   has grok && { info "grok already installed ($(grok --version 2>/dev/null | head -1))"; return; }
@@ -142,6 +144,10 @@ install_grok_plugins() {
   grok plugin install "JuliusBrussee/caveman#plugins/caveman" --trust 2>/dev/null \
     && info "Installed caveman plugin" \
     || warn "caveman plugin install skipped/failed (optional)"
+  # Root-level Claude-style plugin; Grok accepts user/repo when layout is compatible.
+  grok plugin install "DietrichGebert/ponytail" --trust 2>/dev/null \
+    && info "Installed ponytail plugin" \
+    || warn "ponytail plugin install skipped/failed (optional — Claude-native layout)"
 }
 
 print_grok_next_steps() {
@@ -174,15 +180,50 @@ print_grok_next_steps() {
 }
 
 # Full Grok Build install cycle.
+# If ~/.grok already exists: move it to ~/.grok.bak-<ts>, create a fresh dir,
+# reinstall workflow files from this repo, then restore runtime state
+# (auth, personal config, sessions, worktrees, plugins cache, etc.).
 install_grok() {
   step "Configuring Grok Build CLI..."
   ensure_grok
+  local bak=""
+  bak="$(backup_tracked_dir "$GROK_DIR" || true)"
   setup_grok_dirs
   install_grok_agents_md
   install_grok_scripts
   install_grok_agents
   install_grok_skills
   install_grok_hooks
+  # Restore runtime secrets/state before config hint / MCP so personal
+  # config.toml and auth survive the bak+recreate cycle.
+  restore_from_bak "$bak" "$GROK_DIR" \
+    auth.json \
+    auth.json.lock \
+    config.toml \
+    trusted_folders.toml \
+    trusted_folders.toml.lock \
+    agent_id \
+    sessions \
+    worktrees \
+    worktrees.db \
+    installed-plugins \
+    marketplace-cache \
+    logs \
+    downloads \
+    vendor \
+    bundled \
+    completions \
+    docs \
+    bin \
+    active_sessions.json \
+    CHANGELOG.json \
+    CHANGELOG.md \
+    README.md \
+    version.json \
+    models_cache.json \
+    slash-mru.json \
+    tip_cursor.json \
+    .metadata_version
   install_grok_config_hint
   install_grok_mempalace
   install_grok_plugins

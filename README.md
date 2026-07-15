@@ -34,6 +34,7 @@ The main goal is to solve common problems when working with AI coding agents at 
 | mempalace               | Cross-session persistent memory system                     |
 | MCP servers             | Extend agents with external tools and memory               |
 | caveman plugin          | Compressed AI communication mode (Claude; optional on Grok)|
+| ponytail plugin         | Lazy-senior-dev mode: YAGNI, stdlib first, minimal diffs   |
 | Hooks system            | Automates session lifecycle and safety checks              |
 
 ---
@@ -345,11 +346,14 @@ Grok maps Claude tool names in matchers (`Edit`/`Write` → `search_replace`). O
 | Plugin | Marketplace | Purpose |
 | ------ | ----------- | ------- |
 | `caveman` | `JuliusBrussee/caveman` | Compressed communication |
+| `ponytail` | `DietrichGebert/ponytail` | Lazy senior dev / YAGNI mode |
 | `beads` | `gastownhall/beads` | Task + checkpoint workflow |
 | `superpowers` | `claude-plugins-official` | Skill bundle |
 | `context7` | `claude-plugins-official` | Live docs |
 | `code-simplifier` | `claude-plugins-official` | Diff simplification |
 | `skill-creator` | `claude-plugins-official` | Author skills |
+
+Installer: if `~/.claude` exists it is moved to `~/.claude.bak-<ts>`, then rebuilt. `settings.json` (provider keys) and `history.jsonl` are restored from the bak when present.
 
 ### Grok Build CLI
 
@@ -358,7 +362,10 @@ Grok maps Claude tool names in matchers (`Edit`/`Write` → `search_replace`). O
 ```bash
 grok plugin install gastownhall/beads#plugins/beads --trust
 grok plugin install JuliusBrussee/caveman#plugins/caveman --trust
+grok plugin install DietrichGebert/ponytail --trust
 ```
+
+If `~/.grok` exists it is moved to `~/.grok.bak-<ts>`, then rebuilt. Runtime state (`auth.json`, `config.toml`, sessions, worktrees, installed plugins, …) is restored from the bak; workflow files (`AGENTS.md`, `scripts/`, `agents/`, `hooks/`, `skills/`) come from this repo.
 
 Failures are non-fatal (plugin layout may change). Manage via `/plugins` in the TUI.
 
